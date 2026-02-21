@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<style>
+    .hora-plana { white-space: nowrap; font-size: 0.85rem; padding-left: 10px !important; text-align: left !important; }
+    .table-container { overflow-x: auto; max-width: 100%; position: relative; }
+    .table-bordered > :not(caption) > * > * { border-width: 1px; }
+    
+    /* Columnas fijas */
+    .sticky-col { position: sticky; left: 0; z-index: 2; background: #f8f9fa !important; border-right: 1px solid #dee2e6 !important; }
+    .sticky-col-2 { position: sticky; left: 60px; z-index: 2; background: #f8f9fa !important; border-right: 1px solid #dee2e6 !important; }
+    thead th.sticky-col, thead th.sticky-col-2 { z-index: 3; background: #212529 !important; color: white; }
+    
+    .select2-container--bootstrap-5 .select2-selection { border-radius: 0.375rem; }
+
+    /* FILA DIVISORA NEGRA */
+    .divisor-grado { background-color: #000 !important; height: 8px !important; line-height: 8px !important; padding: 0 !important; }
+    .divisor-grado td { padding: 0 !important; border: none !important; background-color: #000 !important; }
+
+    .cell-hover:hover { background-color: #f1f8ff !important; transition: 0.2s; }
+</style>
+
+<div class="container-fluid py-3">
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-body">
+            <div class="row align-items-end g-3">
+                <div class="col-md-4">
+                    <label class="small fw-bold text-muted mb-1"><i class="fas fa-search"></i> Buscar Colegio:</label>
+                    <select class="form-select select2-busqueda" onchange="window.location.href='?id_col=' + this.value + '&vista={{ tipo_vista }}&fecha={{ fecha_input }}'">
+                        <option value="">Escribe el nombre del colegio...</option>
+                        {% for c in colegios %}
+                        <option value="{{ c.id }}" {% if sel_col and sel_col.id == c.id %}selected{% endif %}>{{ c.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="col-md-3 text-center">
+                    <div class="btn-group w-100 shadow-sm">
+                        <a href="?id_col={{ sel_col.id }}&vista=Semana&fecha={{ fecha_input }}" class="btn btn-sm {% if tipo_vista == 'Semana' %}btn-primary{% else %}btn-outline-primary{% endif %}">Semana</a>
+                        <a href="?id_col={{ sel_col.id }}&vista=Mes&fecha={{ fecha_input }}" class="btn btn-sm {% if tipo_vista == 'Mes' %}btn-primary{% else %}btn-outline-primary{% endif %}">Mes</a>
+                        <a href="?id_col={{ sel_col.id }}&vista=Año&fecha={{ fecha_input }}" class="btn btn-sm {% if tipo_vista == 'Año' %}btn-primary{% else %}btn-outline-primary{% endif %}">Año</a>
+                    </div>
+                </div>
+
+                <div class="col-md-5 d-flex align-items-center gap-2">
+                    <a href="?id_col={{ sel_col.id }}&vista={{ tipo_vista }}&fecha={{ fecha_ant }}" class="btn btn-dark btn-sm">◀ Anterior</a>
+                    <div class="flex-grow-1 text-center">
+                        <input type="date" class="form-control form-control-sm text-center shadow-sm" 
+                               value="{{ fecha_input }}" 
+                               onchange="window.location.href='?id_col={{ sel_col.id }}&vista={{ tipo_vista }}&fecha=' + this.value">
+                    </div>
+                    <a href="?id_col={{ sel_col.id }}&vista={{ tipo_vista }}&fecha={{ fecha_sig }}" class="btn btn-dark btn-sm">Siguiente ▶</a>
+                    <a href="/admin" class="btn btn-outline-danger btn-sm" title="Ir al Panel de Administración"><i class="fas fa-user-shield"></i></a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if sel_col %}
+    <div class="table-container shadow-sm rounded border">
+        <table class="table table-bordered text-center align-middle bg-white mb-0">
+            <thead class="table-dark">
+                <tr>
+                    <th class="sticky-col" style="width: 70px;">Grado</th>
+                    <th class="sticky-col-2" style="width: 120px;">Horario</th>
+                    {% for dia in dias_header %}
+                    <th style="min-width: 160px;">
+                        <span class="text-capitalize">{{ dia|date:"D d" }}</span><br>
+                        <small class="fw-light text-uppercase">{{ dia|date:"M" }}</small>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for grado, lista_bloques in bloques_agrupados.items %}
+                    {% for bloque in lista_bloques %}
+                    <tr>
+                        {% if forloop.first %}
+                        <td rowspan="{{ lista_bloques|length }}" class="fw-bold sticky-col bg-light border-end">{{ grado }}</td>
+                        {% endif %}
+                        <td class="sticky-col-2 hora-plana border-end">{{ bloque.hora }}</td>
+                        
+                        {% for dia in dias_header %}
+                            {% with dia_str=dia|date:"Y-m-d" %}
+                                <td class="p-0 position-relative cell-hover" style="height: 50px; vertical-align: top; cursor: pointer;"
+                                    ondblclick="prepararModal('{{ bloque.id }}', '{{ grado }}', '{{ bloque.hora }}', '{{ dia_str }}', '{{ dia|date:'D d M' }}')">
+                                    
+                                    {% for bid, fechas in matriz.items %}
+                                        {% if bid == bloque.id %}
+                                            {% for f, clase in fechas.items %}
+                                                {% if f == dia_str %}
+                                                    <div id="info-clase-{{ bloque.id }}-{{ dia_str }}" 
+                                                         data-materia="{{ clase.materia }}" 
+                                                         data-profe="{{ clase.profesor.id|default:'' }}" 
+                                                         data-unidad="{{ clase.unidad|default:'' }}"
+                                                         class="p-1 text-start border-start border-3 border-primary h-100" style="font-size: 0.75rem; background: #f0f7ff; line-height: 1;">
+                                                        <div class="fw-bold text-dark" style="line-height: 1.1;">{{ clase.materia }}</div>
+                                                        <div class="text-muted small">{{ clase.profesor.nombre }}</div>
+                                                        {% if clase.unidad %}<div class="badge bg-dark mt-1" style="font-size: 0.6rem;">U. {{ clase.unidad }}</div>{% endif %}
+                                                    </div>
+                                                {% endif %}
+                                            {% endfor %}
+                                        {% endif %}
+                                    {% endfor %}
+                                </td>
+                            {% endwith %}
+                        {% endfor %}
+                    </tr>
+                    {% endfor %}
+                    <tr class="divisor-grado"><td colspan="{{ dias_header|length|add:2 }}"></td></tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="fas fa-hand-pointer fa-3x mb-3 opacity-25"></i>
+        <h4>Usa el buscador de arriba para seleccionar un colegio</h4>
+    </div>
+    {% endif %}
+</div>
+
+<div class="modal fade" id="modalClase" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="guardar_clase" value="1">
+            <input type="hidden" name="bloque_id" id="modal_bloque_id">
+            <input type="hidden" name="fecha_clase" id="modal_fecha_clase">
+            <input type="hidden" name="eliminar_clase" id="modal_eliminar" value="0">
+
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title" id="modalTitle">Programar Clase</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p class="mb-3 text-muted" id="modalSubtitle"></p>
+                
+                <div class="mb-3 p-3 bg-light rounded border border-info">
+                    <label class="form-label fw-bold text-info"><i class="fas fa-book"></i> Vinculado desde el libro asignado</label>
+                    <select id="modal_selector_recurso" class="form-select border-info">
+                        <option value="">-- Puedes seleccionar un tema del libro aquí --</option>
+                    </select>
+                    <small class="text-muted d-block mt-1">Al seleccionar, se llenarán automáticamente los campos de abajo.</small>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Materia / Tema</label>
+                    <input type="text" name="materia" id="modal_materia" class="form-control" placeholder="Ej: Física Mecánica" required>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Profesor</label>
+                    <select name="profesor" id="modal_profesor" class="form-select">
+                        <option value="">Seleccionar profesor...</option>
+                        {% for p in profesores %}
+                        <option value="{{ p.id }}">{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Unidad</label>
+                    <input type="text" name="unidad" id="modal_unidad" class="form-control" placeholder="Ej: 1">
+                </div>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="button" id="btnEliminar" class="btn btn-danger d-none" onclick="confirmarEliminar()">Eliminar Clase</button>
+                <div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Guardar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // Leemos el JSON enviado desde Python con los libros asignados por grado
+    const recursosPorGrado = JSON.parse('{{ recursos_json|escapejs|default:"{}" }}');
+
+    $(document).ready(function() {
+        $('.select2-busqueda').select2({ theme: "bootstrap-5", width: '100%' });
+    });
+
+    function prepararModal(bloqueId, grado, hora, fechaISO, fechaLegible) {
+        // Resetear campos
+        document.getElementById('modal_bloque_id').value = bloqueId;
+        document.getElementById('modal_fecha_clase').value = fechaISO;
+        document.getElementById('modal_eliminar').value = "0";
+        document.getElementById('modal_materia').value = "";
+        document.getElementById('modal_profesor').value = "";
+        document.getElementById('modal_unidad').value = "";
+        document.getElementById('btnEliminar').classList.add('d-none');
+
+        document.getElementById('modalTitle').innerText = "Grado " + grado + " | " + hora;
+        document.getElementById('modalSubtitle').innerText = "Fecha: " + fechaLegible;
+
+        // Llenar el selector de recursos para el grado seleccionado
+        const selectorRecurso = document.getElementById('modal_selector_recurso');
+        selectorRecurso.innerHTML = '<option value="">-- Escribir manualmente o seleccionar --</option>';
+        
+        if (recursosPorGrado[grado]) {
+            recursosPorGrado[grado].forEach(function(recurso) {
+                let option = document.createElement('option');
+                // Guardamos materia y unidad en el value en formato JSON
+                option.value = JSON.stringify({materia: recurso.materia, unidad: recurso.unidad});
+                option.textContent = recurso.texto;
+                selectorRecurso.appendChild(option);
+            });
+        }
+
+        // Buscar si ya existe información en la celda
+        var infoDiv = document.getElementById('info-clase-' + bloqueId + '-' + fechaISO);
+        if (infoDiv) {
+            document.getElementById('modal_materia').value = infoDiv.getAttribute('data-materia');
+            document.getElementById('modal_profesor').value = infoDiv.getAttribute('data-profe');
+            document.getElementById('modal_unidad').value = infoDiv.getAttribute('data-unidad');
+            document.getElementById('btnEliminar').classList.remove('d-none');
+        }
+        
+        var myModal = new bootstrap.Modal(document.getElementById('modalClase'));
+        myModal.show();
+    }
+
+    // Listener para rellenar los inputs automáticamente cuando se elige un recurso del desplegable
+    document.getElementById('modal_selector_recurso').addEventListener('change', function() {
+        if(this.value) {
+            const data = JSON.parse(this.value);
+            document.getElementById('modal_materia').value = data.materia;
+            document.getElementById('modal_unidad').value = data.unidad;
+        } else {
+            // Si vuelve a la opción por defecto, borramos los campos para que escriba libremente
+            document.getElementById('modal_materia').value = "";
+            document.getElementById('modal_unidad').value = "";
+        }
+    });
+
+    function confirmarEliminar() {
+        if (confirm("¿Seguro que quieres eliminar esta clase programada?")) {
+            document.getElementById('modal_eliminar').value = "1";
+            document.querySelector('#modalClase form').submit();
+        }
+    }
+</script>
+{% endblock %}
