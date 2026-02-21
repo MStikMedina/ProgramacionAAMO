@@ -140,23 +140,10 @@
             </div>
             <div class="modal-body">
                 <p class="mb-3 text-muted" id="modalSubtitle"></p>
-                
-                <div class="mb-3 p-3 bg-light rounded border border-info">
-                    <label class="form-label fw-bold text-info"><i class="fas fa-book"></i> Vinculado desde el libro asignado</label>
-                    <select id="modal_selector_recurso" class="form-select border-info">
-                        <option value="">-- Puedes seleccionar un tema del libro aquí --</option>
-                    </select>
-                    <small class="text-muted d-block mt-1">Al seleccionar, se llenarán automáticamente los campos de abajo.</small>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label fw-bold">Materia / Tema</label>
-                    <input type="text" name="materia" id="modal_materia" class="form-control" placeholder="Ej: Física Mecánica" required>
-                </div>
 
                 <div class="mb-3">
                     <label class="form-label fw-bold">Profesor</label>
-                    <select name="profesor" id="modal_profesor" class="form-select">
+                    <select name="profesor" id="modal_profesor" class="form-select" required>
                         <option value="">Seleccionar profesor...</option>
                         {% for p in profesores %}
                         <option value="{{ p.id }}">{{ p.nombre }}</option>
@@ -165,8 +152,18 @@
                 </div>
 
                 <div class="mb-3">
+                    <label class="form-label fw-bold">Materia / Tema</label>
+                    <select name="materia" id="modal_materia" class="form-select" required>
+                        <option value="">Seleccionar materia...</option>
+                    </select>
+                </div>
+
+                <div class="mb-3">
                     <label class="form-label fw-bold">Unidad</label>
-                    <input type="text" name="unidad" id="modal_unidad" class="form-control" placeholder="Ej: 1">
+                    <select name="unidad" id="modal_unidad" class="form-select" required>
+                        <option value="">Seleccionar unidad...</option>
+                    </select>
+                    <small class="text-muted" id="texto-recomendacion"></small>
                 </div>
             </div>
             <div class="modal-footer d-flex justify-content-between">
@@ -181,64 +178,104 @@
 </div>
 
 <script>
-    // Leemos el JSON enviado desde Python con los libros asignados por grado
-    const recursosPorGrado = JSON.parse('{{ recursos_json|escapejs|default:"{}" }}');
-
     $(document).ready(function() {
         $('.select2-busqueda').select2({ theme: "bootstrap-5", width: '100%' });
     });
 
-    function prepararModal(bloqueId, grado, hora, fechaISO, fechaLegible) {
+    async function prepararModal(bloqueId, grado, hora, fechaISO, fechaLegible) {
         // Resetear campos
         document.getElementById('modal_bloque_id').value = bloqueId;
         document.getElementById('modal_fecha_clase').value = fechaISO;
         document.getElementById('modal_eliminar').value = "0";
-        document.getElementById('modal_materia').value = "";
         document.getElementById('modal_profesor').value = "";
-        document.getElementById('modal_unidad').value = "";
+        document.getElementById('texto-recomendacion').innerText = "";
         document.getElementById('btnEliminar').classList.add('d-none');
 
         document.getElementById('modalTitle').innerText = "Grado " + grado + " | " + hora;
         document.getElementById('modalSubtitle').innerText = "Fecha: " + fechaLegible;
 
-        // Llenar el selector de recursos para el grado seleccionado
-        const selectorRecurso = document.getElementById('modal_selector_recurso');
-        selectorRecurso.innerHTML = '<option value="">-- Escribir manualmente o seleccionar --</option>';
-        
-        if (recursosPorGrado[grado]) {
-            recursosPorGrado[grado].forEach(function(recurso) {
-                let option = document.createElement('option');
-                // Guardamos materia y unidad en el value en formato JSON
-                option.value = JSON.stringify({materia: recurso.materia, unidad: recurso.unidad});
-                option.textContent = recurso.texto;
-                selectorRecurso.appendChild(option);
-            });
-        }
+        // Limpiar selects dependientes
+        let selectMat = document.getElementById('modal_materia');
+        let selectUni = document.getElementById('modal_unidad');
+        selectMat.innerHTML = '<option value="">Cargando materias...</option>';
+        selectUni.innerHTML = '<option value="">Seleccionar unidad...</option>';
 
-        // Buscar si ya existe información en la celda
-        var infoDiv = document.getElementById('info-clase-' + bloqueId + '-' + fechaISO);
-        if (infoDiv) {
-            document.getElementById('modal_materia').value = infoDiv.getAttribute('data-materia');
-            document.getElementById('modal_profesor').value = infoDiv.getAttribute('data-profe');
-            document.getElementById('modal_unidad').value = infoDiv.getAttribute('data-unidad');
-            document.getElementById('btnEliminar').classList.remove('d-none');
-        }
-        
-        var myModal = new bootstrap.Modal(document.getElementById('modalClase'));
-        myModal.show();
+        // 1. Cargar materias asignadas para esa fecha
+        try {
+            let res = await fetch(`/cronograma/ajax/obtener-materias/?colegio_id={{ sel_col.id }}&grado=${grado}&fecha=${fechaISO}`);
+            let materias = await res.json();
+            
+            selectMat.innerHTML = '<option value="">Seleccionar materia...</option>';
+            materias.forEach(m => {
+                let opt = document.createElement('option');
+                opt.value = m; opt.textContent = m;
+                selectMat.appendChild(opt);
+            });
+
+            // 2. Si ya había una clase guardada, rellenar los datos
+            let infoDiv = document.getElementById('info-clase-' + bloqueId + '-' + fechaISO);
+            if (infoDiv) {
+                document.getElementById('modal_profesor').value = infoDiv.getAttribute('data-profe');
+                document.getElementById('modal_materia').value = infoDiv.getAttribute('data-materia');
+                document.getElementById('btnEliminar').classList.remove('d-none');
+                
+                // Cargar las unidades para dejar el select listo con la unidad guardada
+                await cargarUnidades(grado, fechaISO, infoDiv.getAttribute('data-unidad'));
+            }
+        } catch(e) { console.error('Error cargando materias', e); }
+
+        new bootstrap.Modal(document.getElementById('modalClase')).show();
     }
 
-    // Listener para rellenar los inputs automáticamente cuando se elige un recurso del desplegable
-    document.getElementById('modal_selector_recurso').addEventListener('change', function() {
-        if(this.value) {
-            const data = JSON.parse(this.value);
-            document.getElementById('modal_materia').value = data.materia;
-            document.getElementById('modal_unidad').value = data.unidad;
-        } else {
-            // Si vuelve a la opción por defecto, borramos los campos para que escriba libremente
-            document.getElementById('modal_materia').value = "";
-            document.getElementById('modal_unidad').value = "";
+    // Función auxiliar para cargar unidades y auto-recomendar
+    async function cargarUnidades(grado, fechaISO, unidadGuardada = null) {
+        let profe = document.getElementById('modal_profesor').value;
+        let materia = document.getElementById('modal_materia').value;
+        let selectUni = document.getElementById('modal_unidad');
+        let textoReco = document.getElementById('texto-recomendacion');
+        textoReco.innerText = "";
+        
+        if(!materia) {
+            selectUni.innerHTML = '<option value="">Selecciona materia primero...</option>';
+            return;
         }
+
+        selectUni.innerHTML = '<option value="">Cargando unidades...</option>';
+        let url = `/cronograma/ajax/obtener-unidades/?colegio_id={{ sel_col.id }}&grado=${grado}&fecha=${fechaISO}&materia=${materia}&profesor_id=${profe}`;
+        
+        try {
+            let res = await fetch(url);
+            let data = await res.json();
+            
+            selectUni.innerHTML = '<option value="">Seleccionar unidad...</option>';
+            data.unidades.forEach(u => {
+                let opt = document.createElement('option');
+                opt.value = u; 
+                // Asignar los textos especiales para A y S
+                opt.textContent = (u === 'A') ? 'A - Material Asignado' : (u === 'S') ? 'S - Socialización de Simulacro' : u;
+                selectUni.appendChild(opt);
+            });
+
+            if (unidadGuardada) {
+                selectUni.value = unidadGuardada;
+            } else if (data.recomendada) {
+                selectUni.value = data.recomendada;
+                textoReco.innerHTML = '<i class="fas fa-magic text-success"></i> <span class="text-success">Unidad recomendada automáticamente.</span>';
+            }
+        } catch(e) { console.error('Error cargando unidades', e); }
+    }
+
+    // Escuchar cambios para actualizar unidades y la recomendación dinámica
+    document.getElementById('modal_profesor').addEventListener('change', () => {
+        let grado = document.getElementById('modalTitle').innerText.split('|')[0].replace('Grado ', '').trim();
+        let fechaISO = document.getElementById('modal_fecha_clase').value;
+        cargarUnidades(grado, fechaISO);
+    });
+
+    document.getElementById('modal_materia').addEventListener('change', () => {
+        let grado = document.getElementById('modalTitle').innerText.split('|')[0].replace('Grado ', '').trim();
+        let fechaISO = document.getElementById('modal_fecha_clase').value;
+        cargarUnidades(grado, fechaISO);
     });
 
     function confirmarEliminar() {
