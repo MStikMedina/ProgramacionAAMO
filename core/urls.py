@@ -7,4 +7,5 @@ urlpatterns = [
     path('libros/', gestion_libros, name='gestion_libros'),
     path('colegios/', gestion_colegios, name='gestion_colegios'),
     path('profesores/', gestion_profesores, name='gestion_profesores'),
+    path('cronograma/', include('cronograma.urls')),
 ]
