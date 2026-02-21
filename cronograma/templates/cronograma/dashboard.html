@@ -86,9 +86,9 @@
                         <td class="sticky-col-2 hora-plana border-end">{{ bloque.hora }}</td>
                         
                         {% for dia in dias_header %}
-                            {% with dia_str=dia|date:"Y-m-d" %}
+                            {% with dia_str=dia|date:"Y-m-d" dia_legible=dia|date:"D d M" %}
                                 <td class="p-0 position-relative cell-hover" style="height: 50px; vertical-align: top; cursor: pointer;"
-                                    ondblclick="prepararModal('{{ bloque.id }}', '{{ grado }}', '{{ bloque.hora }}', '{{ dia_str }}', '{{ dia|date:'D d M' }}')">
+                                    ondblclick="prepararModal('{{ bloque.id }}', '{{ grado }}', '{{ bloque.hora }}', '{{ dia_str }}', '{{ dia_legible }}')">
                                     
                                     {% for bid, fechas in matriz.items %}
                                         {% if bid == bloque.id %}
