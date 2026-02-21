@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="row">
+    <div class="col-md-4">
+        <div class="card border-success mb-3">
+            <div class="card-header bg-success text-white"><i class="fas fa-school"></i> Nuevo Colegio</div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3"><label class="fw-bold">Nombre</label> {{ form.nombre }}</div>
+                    <div class="mb-3"><label class="fw-bold">Ciudad</label> {{ form.ciudad }}</div>
+                    <div class="mb-3"><label class="fw-bold">Link Mapa</label> {{ form.mapa_link }}</div>
+                    <button type="submit" class="btn btn-success w-100">Guardar Colegio</button>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">Listado de Colegios</div>
+            <div class="table-responsive">
+                <table class="table table-striped table-hover mb-0">
+                    <thead class="table-dark"><tr><th>Nombre</th><th>Ciudad</th><th>Mapa</th></tr></thead>
+                    <tbody>
+                        {% for c in colegios %}
+                        <tr>
+                            <td class="fw-bold">{{ c.nombre }}</td>
+                            <td>{{ c.ciudad }}</td>
+                            <td>{% if c.mapa_link %}<a href="{{ c.mapa_link }}" target="_blank" class="btn btn-sm btn-outline-primary"><i class="fas fa-map-marker-alt"></i> Ver</a>{% endif %}</td>
+                        </tr>
+                        {% empty %}<tr><td colspan="3" class="text-center text-muted">Sin colegios.</td></tr>{% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
