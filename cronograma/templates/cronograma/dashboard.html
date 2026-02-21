@@ -228,9 +228,10 @@
     }
 
     // Función auxiliar para cargar unidades y auto-recomendar
+    // Función auxiliar para cargar unidades y auto-recomendar
     async function cargarUnidades(grado, fechaISO, unidadGuardada = null) {
-        let profe = document.getElementById('modal_profesor').value;
         let materia = document.getElementById('modal_materia').value;
+        let bloqueId = document.getElementById('modal_bloque_id').value; // Novedad: Tomamos el bloque actual
         let selectUni = document.getElementById('modal_unidad');
         let textoReco = document.getElementById('texto-recomendacion');
         textoReco.innerText = "";
@@ -241,7 +242,9 @@
         }
 
         selectUni.innerHTML = '<option value="">Cargando unidades...</option>';
-        let url = `/cronograma/ajax/obtener-unidades/?colegio_id={{ sel_col.id }}&grado=${grado}&fecha=${fechaISO}&materia=${materia}&profesor_id=${profe}`;
+        
+        // Novedad: URL actualizada enviando el bloque_id y sin el profesor
+        let url = `/cronograma/ajax/obtener-unidades/?colegio_id={{ sel_col.id }}&grado=${grado}&fecha=${fechaISO}&materia=${materia}&bloque_id=${bloqueId}`;
         
         try {
             let res = await fetch(url);
@@ -251,7 +254,6 @@
             data.unidades.forEach(u => {
                 let opt = document.createElement('option');
                 opt.value = u; 
-                // Asignar los textos especiales para A y S
                 opt.textContent = (u === 'A') ? 'A - Material Asignado' : (u === 'S') ? 'S - Socialización de Simulacro' : u;
                 selectUni.appendChild(opt);
             });

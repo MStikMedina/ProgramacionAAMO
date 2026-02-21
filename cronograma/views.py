@@ -51,7 +51,7 @@ def obtener_unidades(request):
     grado = request.GET.get('grado')
     fecha_str = request.GET.get('fecha')
     materia = request.GET.get('materia')
-    profesor_id = request.GET.get('profesor_id')
+    bloque_id = request.GET.get('bloque_id') # Nuevo parámetro
 
     if not all([colegio_id, grado, fecha_str, materia]):
         return JsonResponse({'unidades': [], 'recomendada': ''})
@@ -67,35 +67,41 @@ def obtener_unidades(request):
         unis = Libro.objects.filter(titulo=asig.libro_titulo, materia=materia).values_list('unidad', flat=True)
         unidades_libro.extend(list(unis))
 
-    # Extraer solo números para ordenarlos lógicamente, luego añadir 'A' y 'S'
+    # Extraer solo números para la recomendación
     numeros = sorted([str(u) for u in set(unidades_libro) if str(u).isdigit()], key=int)
+    # Las unidades finales que se muestran en la lista sí incluyen A y S
     unidades_finales = numeros + ['A', 'S']
 
     unidad_recomendada = ""
-    if profesor_id:
-        # Buscar la última clase que dictó este profesor en esta materia y colegio
-        ultima_clase = Clase.objects.filter(
-            colegio_id=colegio_id,
-            bloque__grado=grado,
-            profesor_id=profesor_id,
-            materia=materia,
-            fecha__lt=fecha_clase
-        ).order_by('-fecha').first()
 
-        if ultima_clase and ultima_clase.unidad and str(ultima_clase.unidad).isdigit():
-            # Si la última unidad fue un número, recomendar el siguiente
-            siguiente = str(int(ultima_clase.unidad) + 1)
-            if siguiente in unidades_finales:
-                unidad_recomendada = siguiente
-        elif numeros:
-            # Si nunca ha dictado clase, recomendar la unidad más baja disponible
-            unidad_recomendada = numeros[0]
+    # Buscar el historial de la materia, sin importar el profesor
+    query_clases = Clase.objects.filter(
+        colegio_id=colegio_id,
+        bloque__grado=grado,
+        materia=materia,
+        fecha__lte=fecha_clase # Incluimos la fecha actual para que lea clases del mismo día
+    )
+
+    if bloque_id:
+        # Excluimos la celda actual que estamos editando para no romper la secuencia
+        query_clases = query_clases.exclude(bloque_id=bloque_id, fecha=fecha_clase)
+
+    # Obtenemos la última clase registrada
+    ultima_clase = query_clases.order_by('-fecha', '-bloque__orden', '-id').first()
+
+    if ultima_clase and ultima_clase.unidad and str(ultima_clase.unidad).isdigit():
+        siguiente = str(int(ultima_clase.unidad) + 1)
+        # Al validar que "siguiente" esté en "numeros", nos aseguramos de NUNCA recomendar A o S
+        if siguiente in numeros: 
+            unidad_recomendada = siguiente
+    elif numeros:
+        unidad_recomendada = numeros[0]
 
     return JsonResponse({
         'unidades': unidades_finales,
         'recomendada': unidad_recomendada
     })
-
+    
 def dashboard_cronograma(request):
     colegios = Colegio.objects.all().order_by('nombre')
     
