@@ -153,7 +153,15 @@
                                                         {% else %}
                                                             <div class="fw-bold text-dark" style="line-height: 1.1;">{{ clase.materia }}</div>
                                                             <div class="text-muted small">{{ clase.profesor.nombre }}</div>
-                                                            {% if clase.unidad %}<div class="badge bg-dark mt-1" style="font-size: 0.6rem;">U. {{ clase.unidad }}</div>{% endif %}
+                                                            {% if clase.unidad %}
+                                                                <div class="badge bg-dark mt-1" style="font-size: 0.6rem;">
+                                                                    {% if clase.unidad == 'S' or clase.unidad == 'A' %}
+                                                                        {{ clase.unidad }}
+                                                                    {% else %}
+                                                                        U. {{ clase.unidad }}
+                                                                    {% endif %}
+                                                                </div>
+                                                            {% endif %}
                                                         {% endif %}
                                                     </div>
                                                 {% endif %}
