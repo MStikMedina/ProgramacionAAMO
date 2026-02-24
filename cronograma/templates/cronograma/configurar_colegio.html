@@ -11,13 +11,17 @@
             <div class="card shadow-sm">
                 <div class="card-header bg-dark text-white fw-bold"><i class="fas fa-clock"></i> Horarios / Bloques</div>
                 <div class="card-body">
-                    <form method="POST" class="row g-2 mb-3">
+                    <form method="POST" id="formBloque" class="row g-2 mb-3">
                         {% csrf_token %}
-                        <input type="hidden" name="accion" value="add_bloque">
-                        <div class="col-4"><input type="text" name="grado" class="form-control form-control-sm" placeholder="Grado (Ej: 11-1)" required></div>
-                        <div class="col-4"><input type="text" name="hora" class="form-control form-control-sm" placeholder="Hora (Ej: 8:00 - 10:00)" required></div>
-                        <div class="col-2"><input type="number" name="orden" class="form-control form-control-sm" placeholder="Orden" value="1" required></div>
-                        <div class="col-2"><button type="submit" class="btn btn-dark btn-sm w-100"><i class="fas fa-plus"></i></button></div>
+                        <input type="hidden" name="accion" id="accionBloque" value="add_bloque">
+                        <input type="hidden" name="bloque_id" id="idBloque" value="">
+                        <div class="col-4"><input type="text" name="grado" id="gradoBloque" class="form-control form-control-sm" placeholder="Grado (Ej: 11-1)" required></div>
+                        <div class="col-4"><input type="text" name="hora" id="horaBloque" class="form-control form-control-sm" placeholder="Hora (Ej: 8:00 - 10:00)" required></div>
+                        <div class="col-2"><input type="number" name="orden" id="ordenBloque" class="form-control form-control-sm" placeholder="Orden" value="1" required></div>
+                        <div class="col-2 d-flex gap-1">
+                            <button type="submit" id="btnGuardarBloque" class="btn btn-dark btn-sm w-100"><i class="fas fa-plus"></i></button>
+                            <button type="button" id="btnCancelarBloque" class="btn btn-secondary btn-sm d-none" onclick="cancelarEdicionBloque()"><i class="fas fa-times"></i></button>
+                        </div>
                     </form>
                     <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
                         <table class="table table-sm table-striped align-middle">
@@ -26,7 +30,11 @@
                                 {% for b in bloques %}
                                 <tr>
                                     <td>{{ b.grado }}</td><td>{{ b.hora }}</td><td>{{ b.orden }}</td>
-                                    <td class="text-end">
+                                    <td class="text-end text-nowrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary py-0 me-1" 
+                                                onclick="editarBloque('{{ b.id }}', '{{ b.grado|escapejs }}', '{{ b.hora|escapejs }}', '{{ b.orden }}')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
                                         <form method="POST" class="d-inline">
                                             {% csrf_token %}
                                             <input type="hidden" name="accion" value="del_bloque">
@@ -47,25 +55,29 @@
             <div class="card shadow-sm">
                 <div class="card-header bg-primary text-white fw-bold"><i class="fas fa-book"></i> Asignación de Libros</div>
                 <div class="card-body">
-                    <form method="POST" class="row g-2 mb-3">
+                    <form method="POST" id="formAsignacion" class="row g-2 mb-3">
                         {% csrf_token %}
-                        <input type="hidden" name="accion" value="add_asignacion">
-                        <div class="col-6"><input type="text" name="grado" class="form-control form-control-sm" placeholder="Grado (Ej: 11-1)" required></div>
+                        <input type="hidden" name="accion" id="accionAsignacion" value="add_asignacion">
+                        <input type="hidden" name="asignacion_id" id="idAsignacion" value="">
+                        <div class="col-6"><input type="text" name="grado" id="gradoAsignacion" class="form-control form-control-sm" placeholder="Grado (Ej: 11-1)" required></div>
                         <div class="col-6">
-                            <select name="libro_titulo" class="form-select form-select-sm" required>
+                            <select name="libro_titulo" id="libroAsignacion" class="form-select form-select-sm" required>
                                 <option value="">Seleccionar Libro...</option>
                                 {% for titulo in libros %}<option value="{{ titulo }}">{{ titulo }}</option>{% endfor %}
                             </select>
                         </div>
                         <div class="col-5">
                             <small class="text-muted d-block" style="font-size: 0.7rem;">Fecha Inicio</small>
-                            <input type="date" name="fecha_inicio" class="form-control form-control-sm">
+                            <input type="date" name="fecha_inicio" id="inicioAsignacion" class="form-control form-control-sm">
                         </div>
                         <div class="col-5">
                             <small class="text-muted d-block" style="font-size: 0.7rem;">Fecha Fin</small>
-                            <input type="date" name="fecha_fin" class="form-control form-control-sm">
+                            <input type="date" name="fecha_fin" id="finAsignacion" class="form-control form-control-sm">
                         </div>
-                        <div class="col-2 d-flex align-items-end"><button type="submit" class="btn btn-primary btn-sm w-100"><i class="fas fa-plus"></i></button></div>
+                        <div class="col-2 d-flex align-items-end gap-1">
+                            <button type="submit" id="btnGuardarAsignacion" class="btn btn-primary btn-sm w-100"><i class="fas fa-plus"></i></button>
+                            <button type="button" id="btnCancelarAsignacion" class="btn btn-secondary btn-sm d-none" onclick="cancelarEdicionAsignacion()"><i class="fas fa-times"></i></button>
+                        </div>
                     </form>
                     <div class="table-responsive" style="max-height: 250px; overflow-y: auto;">
                         <table class="table table-sm table-striped align-middle">
@@ -78,7 +90,11 @@
                                         {% if a.fecha_inicio %}{{ a.fecha_inicio|date:"d/m/y" }}{% else %}-{% endif %} a 
                                         {% if a.fecha_fin %}{{ a.fecha_fin|date:"d/m/y" }}{% else %}-{% endif %}
                                     </td>
-                                    <td class="text-end">
+                                    <td class="text-end text-nowrap">
+                                        <button type="button" class="btn btn-sm btn-outline-primary py-0 me-1" 
+                                                onclick="editarAsignacion('{{ a.id }}', '{{ a.grado|escapejs }}', '{{ a.libro_titulo|escapejs }}', '{{ a.fecha_inicio|date:"Y-m-d" }}', '{{ a.fecha_fin|date:"Y-m-d" }}')">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
                                         <form method="POST" class="d-inline">
                                             {% csrf_token %}
                                             <input type="hidden" name="accion" value="del_asignacion">
@@ -95,5 +111,58 @@
             </div>
         </div>
     </div>
+
+    <script>
+        // Lógica de edición para Bloques
+        function editarBloque(id, grado, hora, orden) {
+            document.getElementById('accionBloque').value = 'edit_bloque';
+            document.getElementById('idBloque').value = id;
+            document.getElementById('gradoBloque').value = grado;
+            document.getElementById('horaBloque').value = hora;
+            document.getElementById('ordenBloque').value = orden;
+            
+            let btn = document.getElementById('btnGuardarBloque');
+            btn.classList.replace('btn-dark', 'btn-success');
+            btn.innerHTML = '<i class="fas fa-save"></i>';
+            document.getElementById('btnCancelarBloque').classList.remove('d-none');
+        }
+
+        function cancelarEdicionBloque() {
+            document.getElementById('formBloque').reset();
+            document.getElementById('accionBloque').value = 'add_bloque';
+            document.getElementById('idBloque').value = '';
+            
+            let btn = document.getElementById('btnGuardarBloque');
+            btn.classList.replace('btn-success', 'btn-dark');
+            btn.innerHTML = '<i class="fas fa-plus"></i>';
+            document.getElementById('btnCancelarBloque').classList.add('d-none');
+        }
+
+        // Lógica de edición para Asignaciones
+        function editarAsignacion(id, grado, libro, inicio, fin) {
+            document.getElementById('accionAsignacion').value = 'edit_asignacion';
+            document.getElementById('idAsignacion').value = id;
+            document.getElementById('gradoAsignacion').value = grado;
+            document.getElementById('libroAsignacion').value = libro;
+            document.getElementById('inicioAsignacion').value = inicio;
+            document.getElementById('finAsignacion').value = fin;
+
+            let btn = document.getElementById('btnGuardarAsignacion');
+            btn.classList.replace('btn-primary', 'btn-success');
+            btn.innerHTML = '<i class="fas fa-save"></i>';
+            document.getElementById('btnCancelarAsignacion').classList.remove('d-none');
+        }
+
+        function cancelarEdicionAsignacion() {
+            document.getElementById('formAsignacion').reset();
+            document.getElementById('accionAsignacion').value = 'add_asignacion';
+            document.getElementById('idAsignacion').value = '';
+            
+            let btn = document.getElementById('btnGuardarAsignacion');
+            btn.classList.replace('btn-success', 'btn-primary');
+            btn.innerHTML = '<i class="fas fa-plus"></i>';
+            document.getElementById('btnCancelarAsignacion').classList.add('d-none');
+        }
+    </script>
 </body>
 </html>

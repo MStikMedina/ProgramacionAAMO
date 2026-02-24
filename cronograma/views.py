@@ -6,6 +6,7 @@ import re
 import json
 from gestion_datos.models import Colegio, Profesor, Libro
 from .models import Bloque, Clase, Asignacion
+from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 def extraer_minutos(hora_str):
     match = re.search(r'(\d+):(\d+)', str(hora_str))
@@ -192,6 +193,7 @@ def dashboard_cronograma(request):
 
     return render(request, 'cronograma/dashboard.html', ctx)
 
+@xframe_options_sameorigin
 def configurar_colegio(request, colegio_id):
     colegio = get_object_or_404(Colegio, id=colegio_id)
     
@@ -206,6 +208,12 @@ def configurar_colegio(request, colegio_id):
                 hora=request.POST.get('hora'),
                 orden=request.POST.get('orden', 0)
             )
+        elif accion == 'edit_bloque':
+            b = get_object_or_404(Bloque, id=request.POST.get('bloque_id'), colegio=colegio)
+            b.grado = request.POST.get('grado')
+            b.hora = request.POST.get('hora')
+            b.orden = request.POST.get('orden', 0)
+            b.save()  # Guarda los cambios sin crear uno nuevo, protegiendo las clases
         elif accion == 'del_bloque':
             Bloque.objects.filter(id=request.POST.get('bloque_id')).delete()
             
@@ -218,6 +226,13 @@ def configurar_colegio(request, colegio_id):
                 fecha_inicio=request.POST.get('fecha_inicio') or None,
                 fecha_fin=request.POST.get('fecha_fin') or None
             )
+        elif accion == 'edit_asignacion':
+            a = get_object_or_404(Asignacion, id=request.POST.get('asignacion_id'), colegio=colegio)
+            a.grado = request.POST.get('grado')
+            a.libro_titulo = request.POST.get('libro_titulo')
+            a.fecha_inicio = request.POST.get('fecha_inicio') or None
+            a.fecha_fin = request.POST.get('fecha_fin') or None
+            a.save()
         elif accion == 'del_asignacion':
             Asignacion.objects.filter(id=request.POST.get('asignacion_id')).delete()
             
