@@ -45,11 +45,10 @@
             gap: 10px;
         }
 
-        /* Estilo para que el logo se adapte bien */
         .sidebar-logo {
             max-width: 160px;
             height: auto;
-            border-radius: 8px; /* Opcional: bordes redondeados para el logo */
+            border-radius: 8px;
         }
 
         .sidebar-menu {
@@ -58,41 +57,51 @@
             overflow-y: auto;
         }
 
-        .sidebar-menu a {
+        .sidebar-menu a.nav-item {
             color: #adb5bd;
             text-decoration: none;
             padding: 12px 20px;
-            display: block;
+            display: flex;
+            align-items: center;
             font-size: 1.05rem;
             border-left: 4px solid transparent;
             transition: all 0.2s;
         }
 
-        .sidebar-menu a:hover, .sidebar-menu a.active {
+        .sidebar-menu a.nav-item:hover, .sidebar-menu a.nav-item.active {
             color: #fff;
             background-color: #343a40;
             border-left-color: #0d6efd;
         }
 
-        .sidebar-menu i {
+        .sidebar-menu i.icon-main {
             width: 25px;
             text-align: center;
             margin-right: 10px;
         }
 
-        /* Submenú de configuración */
-        .submenu-title {
-            padding: 15px 20px 5px 20px;
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #6c757d;
-            font-weight: bold;
+        /* Estilos del desplegable (Configuración) */
+        .sidebar-menu .collapse-inner a {
+            color: #adb5bd;
+            text-decoration: none;
+            padding: 10px 20px 10px 45px; /* Indentación para que se note que es submenú */
+            display: flex;
+            align-items: center;
+            font-size: 0.95rem;
+            transition: all 0.2s;
         }
 
-        .sidebar-menu .submenu-item {
-            padding-left: 35px;
-            font-size: 0.95rem;
+        .sidebar-menu .collapse-inner a:hover, .sidebar-menu .collapse-inner a.active {
+            color: #fff;
+            background-color: #2c3136;
+        }
+
+        /* Animación de la flecha del desplegable */
+        .nav-item[aria-expanded="true"] .fa-chevron-down {
+            transform: rotate(180deg);
+        }
+        .nav-item .fa-chevron-down {
+            transition: transform 0.3s;
         }
 
         /* Estilos del Contenido Principal */
@@ -143,33 +152,43 @@
         </div>
         
         <div class="sidebar-menu">
-            <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">
-                <i class="fas fa-home"></i> Inicio
+            <a href="{% url 'home' %}" class="nav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                <i class="fas fa-home icon-main"></i> Inicio
             </a>
             
-            <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                <i class="fas fa-calendar-alt text-info"></i> Cronograma
+            <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
+                <i class="fas fa-calendar-alt icon-main text-info"></i> Cronograma
             </a>
 
-            <a href="#" class="">
-                <i class="fas fa-user-clock text-warning"></i> Profesores
+            <a href="#" class="nav-item">
+                <i class="fas fa-user-clock icon-main text-warning"></i> Profesores
             </a>
 
-            <div class="submenu-title">
-                <i class="fas fa-cogs"></i> Configuración
+            <a href="#collapseConfig" data-bs-toggle="collapse" 
+               class="nav-item justify-content-between {% if request.resolver_match.url_name == 'gestion_colegios' or request.resolver_match.url_name == 'gestion_profesores' or request.resolver_match.url_name == 'gestion_libros' %}active{% endif %}" 
+               aria-expanded="{% if request.resolver_match.url_name == 'gestion_colegios' or request.resolver_match.url_name == 'gestion_profesores' or request.resolver_match.url_name == 'gestion_libros' %}true{% else %}false{% endif %}">
+                <div>
+                    <i class="fas fa-cogs icon-main text-secondary"></i> Configuración
+                </div>
+                <i class="fas fa-chevron-down" style="font-size: 0.8rem;"></i>
+            </a>
+            
+            <div class="collapse {% if request.resolver_match.url_name == 'gestion_colegios' or request.resolver_match.url_name == 'gestion_profesores' or request.resolver_match.url_name == 'gestion_libros' %}show{% endif %}" id="collapseConfig">
+                <div class="collapse-inner py-1 bg-dark">
+                    <a href="{% url 'gestion_colegios' %}" class="{% if request.resolver_match.url_name == 'gestion_colegios' %}active{% endif %}">
+                        <i class="fas fa-school" style="width: 25px; text-align: center; margin-right: 10px;"></i> Colegios
+                    </a>
+                    <a href="{% url 'gestion_profesores' %}" class="{% if request.resolver_match.url_name == 'gestion_profesores' %}active{% endif %}">
+                        <i class="fas fa-chalkboard-teacher" style="width: 25px; text-align: center; margin-right: 10px;"></i> Profesores
+                    </a>
+                    <a href="{% url 'gestion_libros' %}" class="{% if request.resolver_match.url_name == 'gestion_libros' %}active{% endif %}">
+                        <i class="fas fa-book" style="width: 25px; text-align: center; margin-right: 10px;"></i> Libros
+                    </a>
+                </div>
             </div>
-            <a href="{% url 'gestion_colegios' %}" class="submenu-item {% if request.resolver_match.url_name == 'gestion_colegios' %}active{% endif %}">
-                <i class="fas fa-school text-success"></i> Colegios
-            </a>
-            <a href="{% url 'gestion_profesores' %}" class="submenu-item {% if request.resolver_match.url_name == 'gestion_profesores' %}active{% endif %}">
-                <i class="fas fa-chalkboard-teacher text-secondary"></i> Profesores (Admin)
-            </a>
-            <a href="{% url 'gestion_libros' %}" class="submenu-item {% if request.resolver_match.url_name == 'gestion_libros' %}active{% endif %}">
-                <i class="fas fa-book text-primary"></i> Libros
-            </a>
         </div>
 
-        <div class="p-3 text-center text-white fw-bold" style="font-size: 0.85rem; background-color: #1a1e21;">
+        <div class="p-3 text-center fw-bold" style="font-size: 0.85rem; background-color: #1a1e21; color: #ffffff;">
             &copy; 2026 Versión Web
         </div>
     </nav>
