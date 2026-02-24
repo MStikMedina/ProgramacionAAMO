@@ -32,7 +32,11 @@
                                     <td>{{ b.grado }}</td><td>{{ b.hora }}</td><td>{{ b.orden }}</td>
                                     <td class="text-end text-nowrap">
                                         <button type="button" class="btn btn-sm btn-outline-primary py-0 me-1" 
-                                                onclick="editarBloque('{{ b.id }}', '{{ b.grado|escapejs }}', '{{ b.hora|escapejs }}', '{{ b.orden }}')">
+                                                data-id="{{ b.id }}"
+                                                data-grado="{{ b.grado }}"
+                                                data-hora="{{ b.hora }}"
+                                                data-orden="{{ b.orden }}"
+                                                onclick="editarBloque(this.dataset.id, this.dataset.grado, this.dataset.hora, this.dataset.orden)">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <form method="POST" class="d-inline">
@@ -92,7 +96,12 @@
                                     </td>
                                     <td class="text-end text-nowrap">
                                         <button type="button" class="btn btn-sm btn-outline-primary py-0 me-1" 
-                                                onclick="editarAsignacion('{{ a.id }}', '{{ a.grado|escapejs }}', '{{ a.libro_titulo|escapejs }}', '{{ a.fecha_inicio|date:"Y-m-d" }}', '{{ a.fecha_fin|date:"Y-m-d" }}')">
+                                                data-id="{{ a.id }}"
+                                                data-grado="{{ a.grado }}"
+                                                data-libro="{{ a.libro_titulo }}"
+                                                data-inicio="{{ a.fecha_inicio|date:'Y-m-d' }}"
+                                                data-fin="{{ a.fecha_fin|date:'Y-m-d' }}"
+                                                onclick="editarAsignacion(this.dataset.id, this.dataset.grado, this.dataset.libro, this.dataset.inicio, this.dataset.fin)">
                                             <i class="fas fa-edit"></i>
                                         </button>
                                         <form method="POST" class="d-inline">
