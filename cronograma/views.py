@@ -191,3 +191,45 @@ def dashboard_cronograma(request):
         ctx['matriz'] = matriz
 
     return render(request, 'cronograma/dashboard.html', ctx)
+
+def configurar_colegio(request, colegio_id):
+    colegio = get_object_or_404(Colegio, id=colegio_id)
+    
+    if request.method == 'POST':
+        accion = request.POST.get('accion')
+        
+        # --- Lógica para Bloques ---
+        if accion == 'add_bloque':
+            Bloque.objects.create(
+                colegio=colegio,
+                grado=request.POST.get('grado'),
+                hora=request.POST.get('hora'),
+                orden=request.POST.get('orden', 0)
+            )
+        elif accion == 'del_bloque':
+            Bloque.objects.filter(id=request.POST.get('bloque_id')).delete()
+            
+        # --- Lógica para Asignaciones ---
+        elif accion == 'add_asignacion':
+            Asignacion.objects.create(
+                colegio=colegio,
+                grado=request.POST.get('grado'),
+                libro_titulo=request.POST.get('libro_titulo'),
+                fecha_inicio=request.POST.get('fecha_inicio') or None,
+                fecha_fin=request.POST.get('fecha_fin') or None
+            )
+        elif accion == 'del_asignacion':
+            Asignacion.objects.filter(id=request.POST.get('asignacion_id')).delete()
+            
+        return redirect('configurar_colegio', colegio_id=colegio.id)
+
+    bloques = Bloque.objects.filter(colegio=colegio).order_by('grado', 'orden')
+    asignaciones = Asignacion.objects.filter(colegio=colegio).order_by('grado')
+    libros_unicos = Libro.objects.values_list('titulo', flat=True).distinct()
+
+    return render(request, 'cronograma/configurar_colegio.html', {
+        'colegio': colegio,
+        'bloques': bloques,
+        'asignaciones': asignaciones,
+        'libros': libros_unicos
+    })
