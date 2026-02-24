@@ -135,6 +135,11 @@ def dashboard_cronograma(request):
                 Clase.objects.filter(colegio=sel_col, bloque_id=bloque_id, fecha=fecha_clase).delete()
             else:
                 profesor_id = request.POST.get('profesor')
+                
+                # Atrapamos los nuevos campos del formulario
+                es_evento = request.POST.get('es_evento') == 'on'
+                cancelada = request.POST.get('cancelada') == 'on'
+                
                 Clase.objects.update_or_create(
                     colegio=sel_col,
                     bloque_id=bloque_id,
@@ -142,7 +147,12 @@ def dashboard_cronograma(request):
                     defaults={
                         'profesor_id': profesor_id if profesor_id else None,
                         'materia': request.POST.get('materia'),
-                        'unidad': request.POST.get('unidad')
+                        'unidad': request.POST.get('unidad'),
+                        # Guardamos los nuevos datos en la base de datos
+                        'es_evento': es_evento,
+                        'titulo_evento': request.POST.get('titulo_evento'),
+                        'cancelada': cancelada,
+                        'comentarios': request.POST.get('comentarios')
                     }
                 )
             return redirect(request.get_full_path())

@@ -41,5 +41,11 @@ class Clase(models.Model):
     materia = models.CharField(max_length=100, blank=True, null=True)
     unidad = models.CharField(max_length=50, blank=True, null=True)
 
+    es_evento = models.BooleanField(default=False, verbose_name="¿Es un evento especial?")
+    titulo_evento = models.CharField(max_length=200, blank=True, null=True, verbose_name="Título del Evento")
+    
+    cancelada = models.BooleanField(default=False, verbose_name="¿Clase Cancelada?")
+    comentarios = models.TextField(blank=True, null=True, verbose_name="Comentarios / Motivo")
+
     class Meta:
         unique_together = ('fecha', 'bloque')
