@@ -1,65 +1,128 @@
 {% extends 'base.html' %}
-{% block header_title %}Mi Horario de Clases{% endblock %}
+{% block header_title %}Profesores{% endblock %}
 
 {% block content %}
-<div class="card shadow-sm mb-4">
+<style>
+    .wrapper-agenda {
+        display: flex;
+        overflow: hidden;
+        background: #fff;
+        border: 1px solid #dee2e6;
+        border-radius: 8px;
+    }
+
+    /* Columna Fija de Etiquetas */
+    .columna-labels {
+        flex: 0 0 150px;
+        background-color: #f8f9fa;
+        border-right: 2px solid #dee2e6;
+        z-index: 2;
+    }
+
+    /* Contenedor de Datos con Scroll */
+    .contenedor-datos {
+        display: flex;
+        overflow-x: auto;
+        flex-grow: 1;
+    }
+
+    .card-datos {
+        flex: 0 0 300px; /* Ancho de cada columna de clase */
+        border-right: 1px solid #dee2e6;
+    }
+
+    .celda {
+        height: 55px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 8px;
+        border-bottom: 1px solid #dee2e6;
+        text-align: center;
+        font-size: 0.9rem;
+    }
+
+    .celda-header {
+        height: 50px;
+        background-color: #e9ecef;
+        font-weight: bold;
+        text-transform: lowercase;
+        border-bottom: 1px solid #dee2e6;
+    }
+
+    .celda-label {
+        justify-content: flex-start;
+        padding-left: 15px;
+        font-weight: bold;
+        color: #495057;
+    }
+
+    /* Eliminar borde final */
+    .celda:last-child { border-bottom: none; }
+    .card-datos:last-child { border-right: none; }
+
+    .link-azul {
+        color: #007bff !important;
+        text-decoration: underline !important;
+        font-weight: 600;
+    }
+</style>
+
+<div class="card shadow-sm mb-4 border-0">
     <div class="card-body">
-        <form method="GET" class="row align-items-end g-3">
-            <div class="col-md-8">
-                <label class="form-label fw-bold">Selecciona tu nombre:</label>
-                <select name="profesor_id" class="form-select" onchange="this.form.submit()">
-                    <option value="">--- Seleccionar ---</option>
-                    {% for p in profesores %}
-                    <option value="{{ p.id }}" {% if profesor_sel == p.id|stringformat:"s" %}selected{% endif %}>
-                        {{ p.nombre }}
-                    </option>
-                    {% endfor %}
-                </select>
-            </div>
+        <form method="GET">
+            <label class="fw-bold mb-2 small text-uppercase text-muted">Seleccione su nombre:</label>
+            <select name="profesor_id" class="form-select" onchange="this.form.submit()">
+                <option value="">--- Buscar Profesor ---</option>
+                {% for p in profesores %}
+                <option value="{{ p.id }}" {% if profesor_sel == p.id|stringformat:"s" %}selected{% endif %}>{{ p.nombre }}</option>
+                {% endfor %}
+            </select>
         </form>
     </div>
 </div>
 
-<div class="card shadow-sm">
-    <div class="card-body">
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead class="table-dark">
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Hora</th>
-                        <th>Colegio</th>
-                        <th>Grado</th>
-                        <th>Materia</th>
-                        <th>Unidad</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for clase in clases %}
-                    <tr>
-                        <td>{{ clase.fecha|date:"D d M" }}</td>
-                        <td>{{ clase.bloque.hora }}</td>
-                        <td>{{ clase.colegio.nombre }}</td>
-                        <td>{{ clase.bloque.grado }}</td>
-                        <td class="fw-bold">{{ clase.materia }}</td>
-                        <td>
-                            <span class="badge bg-primary">
-                                {% if clase.unidad == 'S' %}Socialización
-                                {% elif clase.unidad == 'A' %}Material
-                                {% else %}Unidad {{ clase.unidad }}{% endif %}
-                            </span>
-                        </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="6" class="text-center py-4 text-muted">
-                            No tienes clases programadas o selecciona tu nombre arriba.
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+{% if clases_data %}
+<div class="wrapper-agenda shadow-sm">
+    <div class="columna-labels">
+        <div class="celda celda-header"></div>
+        <div class="celda celda-label">Colegio</div>
+        <div class="celda celda-label">Ciudad</div>
+        <div class="celda celda-label">Hora</div>
+        <div class="celda celda-label">Grado</div>
+        <div class="celda celda-label">Material</div>
+        <div class="celda celda-label">Asignatura</div>
+        <div class="celda celda-label" style="height: 70px;">Unidad</div>
+    </div>
+
+    <div class="contenedor-datos">
+        {% for item in clases_data %}
+        <div class="card-datos">
+            <div class="celda celda-header">{{ item.clase.fecha|date:"d-M." }}</div>
+            
+            <div class="celda">
+                {% if item.clase.colegio.ubicacion_maps %}
+                    <a href="{{ item.clase.colegio.ubicacion_maps }}" target="_blank" class="link-azul">{{ item.clase.colegio.nombre }}</a>
+                {% else %}
+                    {{ item.clase.colegio.nombre }}
+                {% endif %}
+            </div>
+
+            <div class="celda">{{ item.clase.colegio.ubicacion|default:"Bucaramanga" }}</div>
+            <div class="celda fw-bold text-dark">{{ item.clase.bloque.hora }}</div>
+            <div class="celda">{{ item.clase.bloque.grado }}</div>
+            <div class="celda">{{ item.material_nombre }}</div>
+            <div class="celda">{{ item.clase.materia }}</div>
+            
+            <div class="celda" style="height: 70px;">
+                <a href="{{ item.unidad_link }}" target="_blank" class="link-azul">
+                    {{ item.unidad_nombre }}
+                </a>
+            </div>
         </div>
+        {% endfor %}
     </div>
 </div>
+{% endif %}
+
 {% endblock %}
