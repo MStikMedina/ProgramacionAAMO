@@ -3,77 +3,25 @@
 
 {% block content %}
 <style>
-    .wrapper-agenda {
-        display: flex;
-        overflow: hidden;
-        background: #fff;
-        border: 1px solid #dee2e6;
-        border-radius: 8px;
-    }
-
-    /* Columna Fija de Etiquetas */
-    .columna-labels {
-        flex: 0 0 150px;
-        background-color: #f8f9fa;
-        border-right: 2px solid #dee2e6;
-        z-index: 2;
-    }
-
-    /* Contenedor de Datos con Scroll */
-    .contenedor-datos {
-        display: flex;
-        overflow-x: auto;
-        flex-grow: 1;
-    }
-
-    .card-datos {
-        flex: 0 0 300px; /* Ancho de cada columna de clase */
-        border-right: 1px solid #dee2e6;
-    }
-
-    .celda {
-        height: 55px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        padding: 8px;
-        border-bottom: 1px solid #dee2e6;
-        text-align: center;
-        font-size: 0.9rem;
-    }
-
-    .celda-header {
-        height: 50px;
-        background-color: #e9ecef;
-        font-weight: bold;
-        text-transform: lowercase;
-        border-bottom: 1px solid #dee2e6;
-    }
-
-    .celda-label {
-        justify-content: flex-start;
-        padding-left: 15px;
-        font-weight: bold;
-        color: #495057;
-    }
-
-    /* Eliminar borde final */
-    .celda:last-child { border-bottom: none; }
-    .card-datos:last-child { border-right: none; }
-
-    .link-azul {
-        color: #007bff !important;
-        text-decoration: underline !important;
-        font-weight: 600;
-    }
+    .wrapper-agenda { display: flex; background: #fff; border: 1px solid #dee2e6; border-radius: 8px; overflow: hidden; }
+    .columna-labels { flex: 0 0 150px; background-color: #f8f9fa; border-right: 2px solid #dee2e6; }
+    .contenedor-datos { display: flex; overflow-x: auto; flex-grow: 1; }
+    .card-fecha-grupo { display: flex; flex-direction: column; border-right: 1px solid #dee2e6; }
+    .header-combinado { background-color: #e9ecef; font-weight: bold; text-align: center; padding: 10px; border-bottom: 1px solid #dee2e6; height: 50px; }
+    .clases-container { display: flex; }
+    .celda { height: 55px; display: flex; align-items: center; justify-content: center; padding: 5px; border-bottom: 1px solid #dee2e6; font-size: 0.85rem; }
+    .celda-label { justify-content: flex-start; padding-left: 15px; font-weight: bold; color: #495057; }
+    .link-azul { color: #007bff !important; text-decoration: underline !important; font-weight: 600; }
+    .celda-contenido {width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: block; padding: 0 5px; }
+    .celda-contenido:hover {white-space: normal; background: #fff; position: relative; z-index: 10; overflow: visible; border: 1px solid #dee2e6; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
+    .columna-clase { min-width: 220px;  max-width: 280px; border-right: 1px solid #eee; text-align: center;}
 </style>
 
-<div class="card shadow-sm mb-4 border-0">
+<div class="card mb-4 border-0 shadow-sm">
     <div class="card-body">
         <form method="GET">
-            <label class="fw-bold mb-2 small text-uppercase text-muted">Seleccione su nombre:</label>
             <select name="profesor_id" class="form-select" onchange="this.form.submit()">
-                <option value="">--- Buscar Profesor ---</option>
+                <option value="">--- Seleccione su nombre ---</option>
                 {% for p in profesores %}
                 <option value="{{ p.id }}" {% if profesor_sel == p.id|stringformat:"s" %}selected{% endif %}>{{ p.nombre }}</option>
                 {% endfor %}
@@ -82,47 +30,53 @@
     </div>
 </div>
 
-{% if clases_data %}
+{% if agrupado %}
 <div class="wrapper-agenda shadow-sm">
     <div class="columna-labels">
-        <div class="celda celda-header"></div>
+        <div class="celda" style="height: 50px; background: #e9ecef;"></div>
         <div class="celda celda-label">Colegio</div>
         <div class="celda celda-label">Ciudad</div>
         <div class="celda celda-label">Hora</div>
         <div class="celda celda-label">Grado</div>
         <div class="celda celda-label">Material</div>
         <div class="celda celda-label">Asignatura</div>
-        <div class="celda celda-label" style="height: 70px;">Unidad</div>
+        <div class="celda celda-label">Unidad</div>
     </div>
 
     <div class="contenedor-datos">
-        {% for item in clases_data %}
-        <div class="card-datos">
-            <div class="celda celda-header">{{ item.clase.fecha|date:"d-M." }}</div>
-            
-            <div class="celda">
-                {% if item.clase.colegio.ubicacion_maps %}
-                    <a href="{{ item.clase.colegio.ubicacion_maps }}" target="_blank" class="link-azul">{{ item.clase.colegio.nombre }}</a>
-                {% else %}
-                    {{ item.clase.colegio.nombre }}
-                {% endif %}
-            </div>
-
-            <div class="celda">{{ item.clase.colegio.ubicacion|default:"Bucaramanga" }}</div>
-            <div class="celda fw-bold text-dark">{{ item.clase.bloque.hora }}</div>
-            <div class="celda">{{ item.clase.bloque.grado }}</div>
-            <div class="celda">{{ item.material_nombre }}</div>
-            <div class="celda">{{ item.clase.materia }}</div>
-            
-            <div class="celda" style="height: 70px;">
-                <a href="{{ item.unidad_link }}" target="_blank" class="link-azul">
-                    {{ item.unidad_nombre }}
-                </a>
+        {% for grupo in agrupado %}
+        <div class="card-fecha-grupo">
+            <div class="header-combinado">{{ grupo.fecha|date:"d-M."|lower }}</div>
+            <div class="clases-container">
+                {% for item in grupo.clases %}
+                <div class="columna-clase">
+                    <div class="celda">
+                        <a href="{{ item.maps_link }}" target="_blank" class="link-azul">{{ item.clase.colegio.nombre }}</a>
+                    </div>
+                    <div class="celda">{{ item.clase.colegio.ubicacion|default:"Bucaramanga" }}</div>
+                    <div class="celda fw-bold text-dark">{{ item.clase.bloque.hora }}</div>
+                    <div class="celda">{{ item.clase.bloque.grado }}</div>
+                    <div class="columna-clase">
+                        <div class="celda">
+                            <span class="celda-contenido" title="{{ item.material }}">{{ item.material }}</span>
+                        </div>
+        
+                        <div class="celda">
+                            <span class="celda-contenido" title="{{ item.clase.materia }}">{{ item.clase.materia }}</span>
+                        </div>
+        
+                        <div class="celda">
+                            <a href="{{ item.unidad_link }}" target="_blank" class="link-azul celda-contenido" title="{{ item.unidad_full }}">
+                                {{ item.unidad_full }}
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
             </div>
         </div>
         {% endfor %}
     </div>
 </div>
 {% endif %}
-
 {% endblock %}
