@@ -3,44 +3,42 @@
 {% block content %}
 <div class="row">
     <div class="col-md-4">
-        <div class="card border-primary mb-3">
-            <div class="card-header bg-primary text-white">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white fw-bold">
                 <i class="fas fa-plus-circle"></i> Nuevo Recurso
             </div>
             <div class="card-body">
-                <form method="post">
+                <form method="POST">
                     {% csrf_token %}
+                    <input type="hidden" name="accion" value="add">
                     
                     <div class="mb-3">
                         <label class="form-label fw-bold">Título del Libro</label>
-                        {{ form.titulo }} </div>
+                        <input type="text" name="titulo" class="form-control" placeholder="Ej: Saberes 11 Oro" required>
+                    </div>
                     
                     <div class="mb-3">
                         <label class="form-label fw-bold">Materia</label>
-                        {{ form.materia }}
+                        <input type="text" name="materia" class="form-control" placeholder="Ej: Matemáticas" required>
                     </div>
-
+                    
                     <div class="row">
                         <div class="col-6 mb-3">
                             <label class="form-label fw-bold">Unidad #</label>
-                            {{ form.unidad }}
+                            <input type="text" name="unidad" class="form-control" placeholder="Ej: 1" required>
                         </div>
                         <div class="col-6 mb-3">
                             <label class="form-label fw-bold">Nombre Unidad</label>
-                            {{ form.nombre_unidad }}
+                            <input type="text" name="nombre_unidad" class="form-control" placeholder="Ej: Funciones">
                         </div>
                     </div>
-
+                    
                     <div class="mb-3">
                         <label class="form-label fw-bold">Enlace (Link)</label>
-                        {{ form.link_unidad }}
+                        <input type="url" name="link_unidad" class="form-control" placeholder="https://...">
                     </div>
-
-                    <div class="d-grid gap-2">
-                        <button type="submit" class="btn btn-success">
-                            <i class="fas fa-save"></i> Guardar Libro
-                        </button>
-                    </div>
+                    
+                    <button type="submit" class="btn btn-success w-100 fw-bold"><i class="fas fa-save"></i> Guardar Libro</button>
                 </form>
             </div>
         </div>
@@ -53,34 +51,50 @@
             </div>
             <div class="card-body p-0">
                 <div class="table-responsive">
-                    <table class="table table-striped table-hover mb-0 align-middle">
+                    <table class="table table-striped table-hover align-middle">
                         <thead class="table-dark">
                             <tr>
                                 <th>Libro</th>
                                 <th>Materia</th>
                                 <th>Unidad</th>
                                 <th>Link</th>
-                            </tr>
+                                <th class="text-end">Acciones</th> </tr>
                         </thead>
                         <tbody>
-                            {% for libro in libros %}
+                            {% for lib in libros %}
                             <tr>
-                                <td class="fw-bold text-primary">{{ libro.titulo }}</td>
-                                <td><span class="badge bg-secondary">{{ libro.materia }}</span></td>
                                 <td>
-                                    U.{{ libro.unidad }}<br>
-                                    <small class="text-muted">{{ libro.nombre_unidad }}</small>
+                                    <span class="fw-bold text-primary">{{ lib.titulo }}</span>
                                 </td>
                                 <td>
-                                    <a href="{{ libro.link_unidad }}" target="_blank" class="btn btn-sm btn-outline-info">
-                                        <i class="fas fa-external-link-alt"></i> Ver
-                                    </a>
+                                    <span class="badge bg-secondary">{{ lib.materia }}</span>
                                 </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="4" class="text-center py-4 text-muted">
-                                    No hay libros registrados aún.
+                                <td>
+                                    <div class="fw-bold">U.{{ lib.unidad }}</div>
+                                    <small class="text-muted">{{ lib.nombre_unidad }}</small>
+                                </td>
+                                <td>
+                                    {% if lib.link_unidad %}
+                                    <a href="{{ lib.link_unidad }}" target="_blank" class="btn btn-sm btn-outline-info py-0"><i class="fas fa-external-link-alt"></i> Ver</a>
+                                    {% else %}-{% endif %}
+                                </td>
+                                
+                                <td class="text-end text-nowrap">
+                                    
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 me-1" 
+                                            data-id="{{ lib.id }}" data-titulo="{{ lib.titulo }}" data-materia="{{ lib.materia }}" 
+                                            data-unidad="{{ lib.unidad }}" data-nombre="{{ lib.nombre_unidad }}" data-link="{{ lib.link_unidad }}"
+                                            onclick="editarLibro(this.dataset.id, this.dataset.titulo, this.dataset.materia, this.dataset.unidad, this.dataset.nombre, this.dataset.link)">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+
+                                    <form method="POST" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar esta unidad?');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="accion" value="del">
+                                        <input type="hidden" name="libro_id" value="{{ lib.id }}">
+                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0"><i class="fas fa-trash"></i></button>
+                                    </form>
+
                                 </td>
                             </tr>
                             {% endfor %}
@@ -91,4 +105,59 @@
         </div>
     </div>
 </div>
+
+<div class="modal fade" id="modalEditLibro" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="edit">
+            <input type="hidden" name="libro_id" id="edit_libro_id">
+            
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-edit"></i> Editar Libro</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-2">
+                    <label class="form-label fw-bold">Título</label>
+                    <input type="text" name="titulo" id="edit_libro_titulo" class="form-control" required>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-bold">Materia</label>
+                    <input type="text" name="materia" id="edit_libro_materia" class="form-control" required>
+                </div>
+                <div class="row">
+                    <div class="col-4 mb-2">
+                        <label class="form-label fw-bold">Unidad</label>
+                        <input type="text" name="unidad" id="edit_libro_unidad" class="form-control" required>
+                    </div>
+                    <div class="col-8 mb-2">
+                        <label class="form-label fw-bold">Nombre Unidad</label>
+                        <input type="text" name="nombre_unidad" id="edit_libro_nombre" class="form-control">
+                    </div>
+                </div>
+                <div class="mb-2">
+                    <label class="form-label fw-bold">Link</label>
+                    <input type="text" name="link_unidad" id="edit_libro_link" class="form-control">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-success">Guardar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function editarLibro(id, titulo, materia, unidad, nombre, link) {
+        document.getElementById('edit_libro_id').value = id;
+        document.getElementById('edit_libro_titulo').value = titulo;
+        document.getElementById('edit_libro_materia').value = materia;
+        document.getElementById('edit_libro_unidad').value = unidad;
+        document.getElementById('edit_libro_nombre').value = nombre;
+        document.getElementById('edit_libro_link').value = link;
+        new bootstrap.Modal(document.getElementById('modalEditLibro')).show();
+    }
+</script>
 {% endblock %}
