@@ -155,10 +155,12 @@
                                                             <div class="text-muted small">{{ clase.profesor.nombre }}</div>
                                                             {% if clase.unidad %}
                                                                 <div class="badge bg-dark mt-1" style="font-size: 0.6rem;">
-                                                                    {% if clase.unidad == 'S' or clase.unidad == 'A' %}
-                                                                        {{ clase.unidad }}
+                                                                    {% if clase.unidad == 'S' %}
+                                                                        Socialización
+                                                                    {% elif clase.unidad == 'A' %}
+                                                                        Material
                                                                     {% else %}
-                                                                        U. {{ clase.unidad }}
+                                                                        Unidad {{ clase.unidad }}
                                                                     {% endif %}
                                                                 </div>
                                                             {% endif %}
@@ -349,7 +351,7 @@
             data.unidades.forEach(u => {
                 let opt = document.createElement('option');
                 opt.value = u; 
-                opt.textContent = (u === 'A') ? 'A - Material Asignado' : (u === 'S') ? 'S - Socialización de Simulacro' : u;
+                opt.textContent = (u === 'A') ? 'Material Asignado' : (u === 'S') ? 'Socialización de Simulacro' : 'Unidad ' + u;
                 selectUni.appendChild(opt);
             });
 
