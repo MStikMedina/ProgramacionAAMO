@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block header_title %}Inicio{% endblock %}
+
+{% block content %}
+<div class="row align-items-center h-100">
+    <div class="col-md-8 mx-auto text-center">
+        <div class="card border-0 shadow-sm py-5">
+            <div class="card-body">
+                <i class="fas fa-rocket fa-4x text-primary mb-4"></i>
+                <h1 class="display-5 fw-bold text-dark">Bienvenido a AAMO System</h1>
+                <p class="lead text-muted mt-3">
+                    Tu plataforma centralizada para la gestión de cronogramas, colegios, profesores y recursos.
+                </p>
+                <hr class="w-25 mx-auto my-4">
+                <p class="text-secondary">
+                    Selecciona una opción en el menú lateral izquierdo para comenzar a trabajar.
+                </p>
+                <div class="mt-4 gap-2 d-flex justify-content-center">
+                    <a href="{% url 'dashboard' %}" class="btn btn-primary btn-lg px-4"><i class="fas fa-calendar-alt"></i> Ir al Cronograma</a>
+                    <a href="{% url 'gestion_colegios' %}" class="btn btn-outline-secondary btn-lg px-4"><i class="fas fa-school"></i> Ver Colegios</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
