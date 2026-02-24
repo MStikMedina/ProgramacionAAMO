@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'gestion_datos',
     'cronograma',
+    'profesores',
 ]
 
 MIDDLEWARE = [

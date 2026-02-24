@@ -1,0 +1,65 @@
+{% extends 'base.html' %}
+{% block header_title %}Mi Horario de Clases{% endblock %}
+
+{% block content %}
+<div class="card shadow-sm mb-4">
+    <div class="card-body">
+        <form method="GET" class="row align-items-end g-3">
+            <div class="col-md-8">
+                <label class="form-label fw-bold">Selecciona tu nombre:</label>
+                <select name="profesor_id" class="form-select" onchange="this.form.submit()">
+                    <option value="">--- Seleccionar ---</option>
+                    {% for p in profesores %}
+                    <option value="{{ p.id }}" {% if profesor_sel == p.id|stringformat:"s" %}selected{% endif %}>
+                        {{ p.nombre }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Fecha</th>
+                        <th>Hora</th>
+                        <th>Colegio</th>
+                        <th>Grado</th>
+                        <th>Materia</th>
+                        <th>Unidad</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for clase in clases %}
+                    <tr>
+                        <td>{{ clase.fecha|date:"D d M" }}</td>
+                        <td>{{ clase.bloque.hora }}</td>
+                        <td>{{ clase.colegio.nombre }}</td>
+                        <td>{{ clase.bloque.grado }}</td>
+                        <td class="fw-bold">{{ clase.materia }}</td>
+                        <td>
+                            <span class="badge bg-primary">
+                                {% if clase.unidad == 'S' %}Socialización
+                                {% elif clase.unidad == 'A' %}Material
+                                {% else %}Unidad {{ clase.unidad }}{% endif %}
+                            </span>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-4 text-muted">
+                            No tienes clases programadas o selecciona tu nombre arriba.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
