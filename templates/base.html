@@ -1,10 +1,11 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema AAMO</title>
+    <title>Programación AAMO</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 
@@ -27,19 +28,28 @@
             transition: all 0.3s ease-in-out;
         }
 
-        /* Clase para esconder el menú lateral */
         .sidebar.collapsed {
             margin-left: -260px;
         }
 
         .sidebar-brand {
-            padding: 20px;
-            font-size: 1.5rem;
+            padding: 20px 10px;
+            font-size: 1.2rem;
             font-weight: bold;
             text-align: center;
-            letter-spacing: 1px;
             background-color: #1a1e21;
             border-bottom: 1px solid #343a40;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+        }
+
+        /* Estilo para que el logo se adapte bien */
+        .sidebar-logo {
+            max-width: 160px;
+            height: auto;
+            border-radius: 8px; /* Opcional: bordes redondeados para el logo */
         }
 
         .sidebar-menu {
@@ -68,6 +78,21 @@
             width: 25px;
             text-align: center;
             margin-right: 10px;
+        }
+
+        /* Submenú de configuración */
+        .submenu-title {
+            padding: 15px 20px 5px 20px;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #6c757d;
+            font-weight: bold;
+        }
+
+        .sidebar-menu .submenu-item {
+            padding-left: 35px;
+            font-size: 0.95rem;
         }
 
         /* Estilos del Contenido Principal */
@@ -113,30 +138,38 @@
 
     <nav class="sidebar" id="sidebarMenu">
         <div class="sidebar-brand">
-            🚀 AAMO System
+            <img src="{% static 'img/Milton-Ochoa.png' %}" alt="Logo Milton Ochoa" class="sidebar-logo">
+            <span>Programación AAMO</span>
         </div>
+        
         <div class="sidebar-menu">
             <a href="{% url 'home' %}" class="{% if request.resolver_match.url_name == 'home' %}active{% endif %}">
                 <i class="fas fa-home"></i> Inicio
             </a>
             
-            <div class="px-3 py-2 mt-3 mb-1 text-uppercase text-muted" style="font-size: 0.75rem; letter-spacing: 1px;">Gestión de Datos</div>
-            <a href="{% url 'gestion_colegios' %}" class="{% if request.resolver_match.url_name == 'gestion_colegios' %}active{% endif %}">
-                <i class="fas fa-school text-success"></i> Colegios
-            </a>
-            <a href="{% url 'gestion_profesores' %}" class="{% if request.resolver_match.url_name == 'gestion_profesores' %}active{% endif %}">
-                <i class="fas fa-chalkboard-teacher text-warning"></i> Profesores
-            </a>
-            <a href="{% url 'gestion_libros' %}" class="{% if request.resolver_match.url_name == 'gestion_libros' %}active{% endif %}">
-                <i class="fas fa-book text-primary"></i> Libros
-            </a>
-
-            <div class="px-3 py-2 mt-3 mb-1 text-uppercase text-muted" style="font-size: 0.75rem; letter-spacing: 1px;">Operación</div>
             <a href="{% url 'dashboard' %}" class="{% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                 <i class="fas fa-calendar-alt text-info"></i> Cronograma
             </a>
+
+            <a href="#" class="">
+                <i class="fas fa-user-clock text-warning"></i> Profesores
+            </a>
+
+            <div class="submenu-title">
+                <i class="fas fa-cogs"></i> Configuración
+            </div>
+            <a href="{% url 'gestion_colegios' %}" class="submenu-item {% if request.resolver_match.url_name == 'gestion_colegios' %}active{% endif %}">
+                <i class="fas fa-school text-success"></i> Colegios
+            </a>
+            <a href="{% url 'gestion_profesores' %}" class="submenu-item {% if request.resolver_match.url_name == 'gestion_profesores' %}active{% endif %}">
+                <i class="fas fa-chalkboard-teacher text-secondary"></i> Profesores (Admin)
+            </a>
+            <a href="{% url 'gestion_libros' %}" class="submenu-item {% if request.resolver_match.url_name == 'gestion_libros' %}active{% endif %}">
+                <i class="fas fa-book text-primary"></i> Libros
+            </a>
         </div>
-        <div class="p-3 text-center text-muted" style="font-size: 0.8rem; background-color: #1a1e21;">
+
+        <div class="p-3 text-center text-white fw-bold" style="font-size: 0.85rem; background-color: #1a1e21;">
             &copy; 2026 Versión Web
         </div>
     </nav>
@@ -167,7 +200,6 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Lógica para esconder y mostrar el menú lateral
         document.getElementById('sidebarToggle').addEventListener('click', function() {
             document.getElementById('sidebarMenu').classList.toggle('collapsed');
         });
