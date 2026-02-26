@@ -75,6 +75,10 @@ def vista_general(request):
             })
             datos_colegio['total_rowspan'] += rowspan_grado
             
+        # MAGIA AQUÍ: Sumamos las filas negras separadoras de grado para que el colegio no se quede corto
+        if len(grados_ordenados) > 1:
+            datos_colegio['total_rowspan'] += (len(grados_ordenados) - 1)
+            
         estructura_general.append(datos_colegio)
 
     # --- 3. MATRIZ DE CLASES (Lookup rápido) ---

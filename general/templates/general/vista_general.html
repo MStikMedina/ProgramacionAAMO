@@ -17,29 +17,30 @@
     /* Celdas comunes para mantener la cuadrícula visible */
     th, td { border-right: 1px solid #dee2e6; border-bottom: 1px solid #dee2e6; }
 
-    /* Columnas fijas Horizontales */
-    .sticky-col-1 { position: sticky; left: 0; z-index: 5; background: #fff !important; min-width: 120px; text-align: center; vertical-align: middle; }
-    .sticky-col-2 { position: sticky; left: 120px; z-index: 5; background: #f8f9fa !important; min-width: 80px; text-align: center; vertical-align: middle; }
-    .sticky-col-3 { position: sticky; left: 200px; z-index: 5; background: #fff !important; min-width: 110px; font-size: 0.85rem; text-align: center; vertical-align: middle; border-right: 2px solid #adb5bd !important; }
+    /* Columnas fijas Horizontales SOLO para el cuerpo de la tabla */
+    tbody td.sticky-col-1 { position: sticky; left: 0; z-index: 5; background: #fff !important; min-width: 120px; text-align: center; vertical-align: middle; }
+    tbody td.sticky-col-2 { position: sticky; left: 120px; z-index: 5; background: #f8f9fa !important; min-width: 80px; text-align: center; vertical-align: middle; }
+    tbody td.sticky-col-3 { position: sticky; left: 200px; z-index: 5; background: #fff !important; min-width: 110px; font-size: 0.85rem; text-align: center; vertical-align: middle; border-right: 2px solid #adb5bd !important; }
 
-    /* Fila de Fechas Fija (Vertical) */
+    /* Fila de Fechas Fija (Cabecera negra con texto blanco asegurado) */
     thead th { 
         position: sticky; 
-        top: 0; /* Esto hace que la fecha se quede arriba al bajar */
+        top: 0; 
         z-index: 6; 
         background: #212529 !important; 
-        color: white; 
+        color: #ffffff !important; 
         border-bottom: 2px solid #000;
+        vertical-align: middle;
     }
     
-    /* Intersección Esquina Superior Izquierda (Debe tener el z-index más alto) */
-    thead th.sticky-col-1 { left: 0; z-index: 7; }
-    thead th.sticky-col-2 { left: 120px; z-index: 7; }
-    thead th.sticky-col-3 { left: 200px; z-index: 7; border-right: 2px solid #adb5bd !important; }
+    /* Esquinas superiores ancladas */
+    thead th.sticky-col-1 { left: 0; z-index: 7; background: #212529 !important; border-right: 1px solid #495057; }
+    thead th.sticky-col-2 { left: 120px; z-index: 7; background: #212529 !important; border-right: 1px solid #495057; }
+    thead th.sticky-col-3 { left: 200px; z-index: 7; background: #212529 !important; border-right: 2px solid #adb5bd !important; }
 
-    /* MAGIA: Divisores usando bordes, no filas nuevas. Esto arregla el Rowspan del colegio */
-    tr.border-grado > td { border-bottom: 4px solid #000 !important; }
-    tr.border-colegio > td { border-bottom: 6px double #000 !important; }
+    /* FILAS DIVISORAS NEGRAS - Se quita el z-index para que fluyan debajo de la cabecera */
+    tbody tr.divisor-grado td { padding: 0 !important; border: none !important; background-color: #000 !important; height: 12px !important; }
+    tbody tr.divisor-colegio td { padding: 0 !important; border: none !important; background-color: #000 !important; height: 20px !important; }
 
     .cell-hover:hover { background-color: #f1f8ff !important; transition: 0.2s; }
 </style>
@@ -84,10 +85,9 @@
                     {% for grado_data in datos_col.grados_data %}
                         {% for bloque in grado_data.bloques %}
                         
-                        <tr class="{% if forloop.parentloop.last and forloop.last %}border-colegio{% elif forloop.last %}border-grado{% endif %}">
-                            
+                        <tr>
                             {% if forloop.parentloop.first and forloop.first %}
-                                <td rowspan="{{ datos_col.total_rowspan }}" class="sticky-col-1 text-primary fw-bold bg-light">
+                                <td rowspan="{{ datos_col.total_rowspan }}" class="sticky-col-1 text-primary fw-bold bg-light border-end">
                                     {{ datos_col.colegio.nombre }}
                                 </td>
                             {% endif %}
@@ -137,7 +137,26 @@
                             {% endfor %}
                         </tr>
                         {% endfor %}
+                        
+                        {% if not forloop.last %}
+                        <tr class="divisor-grado">
+                            <td class="sticky-col-2"></td>
+                            <td class="sticky-col-3"></td>
+                            <td colspan="{{ dias_header|length }}"></td>
+                        </tr>
+                        {% endif %}
+
                     {% endfor %}
+                    
+                    {% if not forloop.last %}
+                    <tr class="divisor-colegio">
+                        <td class="sticky-col-1"></td>
+                        <td class="sticky-col-2"></td>
+                        <td class="sticky-col-3"></td>
+                        <td colspan="{{ dias_header|length }}"></td>
+                    </tr>
+                    {% endif %}
+
                 {% endfor %}
             </tbody>
         </table>
