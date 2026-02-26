@@ -1,43 +1,52 @@
 {% extends 'base.html' %}
 {% load general_tags %}
-{% block header_title %}Cronograma General{% endblock %}
+{% block header_title %}Cronograma General Maestro{% endblock %}
 
 {% block content %}
 <style>
-    .table-container { overflow-x: auto; max-width: 100%; position: relative; }
-    .table-bordered > :not(caption) > * > * { border-width: 1px; }
-    
-    /* Columnas fijas (Sticky) */
-    .sticky-col-1 { position: sticky; left: 0; z-index: 4; background: #e9ecef !important; width: 120px; border-right: 2px solid #dee2e6; font-weight: bold; vertical-align: middle; }
-    .sticky-col-2 { position: sticky; left: 120px; z-index: 3; background: #f8f9fa !important; width: 80px; border-right: 1px solid #dee2e6; vertical-align: middle; }
-    .sticky-col-3 { position: sticky; left: 200px; z-index: 2; background: #fff !important; width: 130px; border-right: 2px solid #adb5bd; }
-    
-    /* Encabezados fijos */
-    thead th.sticky-col-1, thead th.sticky-col-2, thead th.sticky-col-3 { 
-        z-index: 5; background: #212529 !important; color: white; 
-        top: 0; position: sticky;
+    .table-container { 
+        overflow: auto; 
+        max-width: 100%; 
+        max-height: 75vh; /* Activa el scroll vertical manteniendo la cabecera fija */
+        position: relative; 
     }
+    
+    table { border-collapse: separate; border-spacing: 0; }
+    .table-bordered > :not(caption) > * > * { border-width: 0; } 
 
-    /* Divisores */
-    .divisor-grado td { background-color: #000 !important; height: 4px !important; padding: 0; border: none; }
-    /* NUEVO: Divisor Doble para Colegios */
-    .divisor-colegio-doble td { 
-        border-top: 6px double #000 !important; 
-        height: 6px !important; 
-        padding: 0; background: #000;
+    /* Celdas comunes para mantener la cuadrícula visible */
+    th, td { border-right: 1px solid #dee2e6; border-bottom: 1px solid #dee2e6; }
+
+    /* Columnas fijas Horizontales */
+    .sticky-col-1 { position: sticky; left: 0; z-index: 5; background: #fff !important; min-width: 120px; text-align: center; vertical-align: middle; }
+    .sticky-col-2 { position: sticky; left: 120px; z-index: 5; background: #f8f9fa !important; min-width: 80px; text-align: center; vertical-align: middle; }
+    .sticky-col-3 { position: sticky; left: 200px; z-index: 5; background: #fff !important; min-width: 110px; font-size: 0.85rem; text-align: center; vertical-align: middle; border-right: 2px solid #adb5bd !important; }
+
+    /* Fila de Fechas Fija (Vertical) */
+    thead th { 
+        position: sticky; 
+        top: 0; /* Esto hace que la fecha se quede arriba al bajar */
+        z-index: 6; 
+        background: #212529 !important; 
+        color: white; 
+        border-bottom: 2px solid #000;
     }
+    
+    /* Intersección Esquina Superior Izquierda (Debe tener el z-index más alto) */
+    thead th.sticky-col-1 { left: 0; z-index: 7; }
+    thead th.sticky-col-2 { left: 120px; z-index: 7; }
+    thead th.sticky-col-3 { left: 200px; z-index: 7; border-right: 2px solid #adb5bd !important; }
+
+    /* MAGIA: Divisores usando bordes, no filas nuevas. Esto arregla el Rowspan del colegio */
+    tr.border-grado > td { border-bottom: 4px solid #000 !important; }
+    tr.border-colegio > td { border-bottom: 6px double #000 !important; }
 
     .cell-hover:hover { background-color: #f1f8ff !important; transition: 0.2s; }
-    
-    /* Estilos de eventos y cancelaciones (Reutilizados) */
-    .evento-style { border-left: 4px solid #ffc107; background-color: #fff3cd; }
-    .cancelada-style { border-left: 4px solid #dc3545; background-color: #f8d7da; text-decoration: line-through; opacity: 0.8; }
-    .normal-style { border-left: 4px solid #0d6efd; background-color: #f0f7ff; }
 </style>
 
 <div class="container-fluid py-3">
-    <div class="card mb-4 shadow-sm border-0">
-        <div class="card-body">
+    <div class="card mb-3 shadow-sm border-0">
+        <div class="card-body py-2">
             <div class="row align-items-center">
                 <div class="col-md-4 text-center">
                     <div class="btn-group w-100 shadow-sm">
@@ -46,7 +55,7 @@
                         <a href="?vista=Año&fecha={{ fecha_input }}" class="btn btn-sm {% if tipo_vista == 'Año' %}btn-primary{% else %}btn-outline-primary{% endif %}">Año</a>
                     </div>
                 </div>
-                <div class="col-md-6 d-flex align-items-center gap-2">
+                <div class="col-md-6 d-flex align-items-center gap-2 mt-2 mt-md-0">
                     <a href="?vista={{ tipo_vista }}&fecha={{ fecha_ant }}" class="btn btn-dark btn-sm">◀ Anterior</a>
                     <input type="date" class="form-control form-control-sm text-center shadow-sm" value="{{ fecha_input }}" onchange="window.location.href='?vista={{ tipo_vista }}&fecha=' + this.value">
                     <a href="?vista={{ tipo_vista }}&fecha={{ fecha_sig }}" class="btn btn-dark btn-sm">Siguiente ▶</a>
@@ -55,16 +64,17 @@
         </div>
     </div>
 
-    <div class="table-container shadow-sm rounded border" style="max-height: 80vh; overflow-y: auto;">
-        <table class="table table-bordered text-center align-middle bg-white mb-0 table-sm">
-            <thead class="table-dark">
+    <div class="table-container shadow-sm rounded bg-white border">
+        <table class="table text-center align-middle mb-0 table-sm">
+            <thead>
                 <tr>
                     <th class="sticky-col-1">Colegio</th>
                     <th class="sticky-col-2">Grado</th>
                     <th class="sticky-col-3">Horario</th>
                     {% for dia in dias_header %}
-                    <th style="min-width: 150px;">
-                        <span>{{ dia|date:"D d" }}</span> <small class="text-uppercase">{{ dia|date:"M" }}</small>
+                    <th style="min-width: 160px; padding: 10px 0;">
+                        <span class="text-capitalize">{{ dia|date:"D d" }}</span><br>
+                        <small class="fw-light text-uppercase">{{ dia|date:"M" }}</small>
                     </th>
                     {% endfor %}
                 </tr>
@@ -73,32 +83,52 @@
                 {% for datos_col in estructura_general %}
                     {% for grado_data in datos_col.grados_data %}
                         {% for bloque in grado_data.bloques %}
-                        <tr>
+                        
+                        <tr class="{% if forloop.parentloop.last and forloop.last %}border-colegio{% elif forloop.last %}border-grado{% endif %}">
+                            
                             {% if forloop.parentloop.first and forloop.first %}
-                                <td rowspan="{{ datos_col.total_rowspan }}" class="sticky-col-1 bg-light text-primary">{{ datos_col.colegio.nombre }}</td>
+                                <td rowspan="{{ datos_col.total_rowspan }}" class="sticky-col-1 text-primary fw-bold bg-light">
+                                    {{ datos_col.colegio.nombre }}
+                                </td>
                             {% endif %}
 
                             {% if forloop.first %}
-                                <td rowspan="{{ grado_data.rowspan }}" class="sticky-col-2 fw-bold">{{ grado_data.nombre_grado }}</td>
+                                <td rowspan="{{ grado_data.rowspan }}" class="sticky-col-2 fw-bold">
+                                    {{ grado_data.nombre_grado }}
+                                </td>
                             {% endif %}
                             
-                            <td class="sticky-col-3 hora-plana">{{ bloque.hora }}</td>
+                            <td class="sticky-col-3 fw-bold text-muted">{{ bloque.hora }}</td>
 
                             {% for dia in dias_header %}
                                 {% with dia_str=dia|date:"Y-m-d" %}
-                                <td class="p-0 position-relative cell-hover" style="height: 45px; vertical-align: top;">
+                                <td class="p-0 position-relative cell-hover" style="height: 55px; vertical-align: top;">
                                     {% with clase=matriz|get_item:bloque.id|get_item:dia_str %}
                                         {% if clase %}
-                                            <div class="p-1 text-start h-100 small 
-                                                {% if clase.cancelada %}cancelada-style{% elif clase.es_evento %}evento-style{% else %}normal-style{% endif %}" 
-                                                style="line-height: 1;">
-                                                {% if clase.es_evento %}
-                                                    <strong>Letra: {{ clase.titulo_evento }}</strong>
+                                            <div class="p-1 text-start border-start border-3 h-100 position-relative 
+                                                {% if clase.cancelada %}border-danger bg-danger bg-opacity-10
+                                                {% elif clase.es_evento %}border-warning bg-warning bg-opacity-10
+                                                {% else %}border-primary bg-primary bg-opacity-10{% endif %}" 
+                                                style="font-size: 0.75rem; line-height: 1;">
+                                                
+                                                {% if clase.cancelada %}
+                                                    <span class="badge bg-danger mb-1" style="font-size: 0.6rem;">Cancelada</span>
+                                                    <div class="fw-bold text-dark text-decoration-line-through" style="line-height: 1.1;">{{ clase.materia }}</div>
+                                                    <div class="text-muted small text-decoration-line-through">{{ clase.profesor.nombre }}</div>
+                                                {% elif clase.es_evento %}
+                                                    <span class="badge bg-warning text-dark mb-1" style="font-size: 0.6rem;"><i class="fas fa-star"></i> Evento</span>
+                                                    <div class="fw-bold text-dark" style="line-height: 1.1;">{{ clase.titulo_evento }}</div>
                                                 {% else %}
-                                                    <strong>Letra: {{ clase.materia }}</strong><br>
-                                                    <span class="text-muted">{{ clase.profesor.nombre|default:"-" }}</span>
+                                                    <div class="fw-bold text-dark" style="line-height: 1.1;">{{ clase.materia }}</div>
+                                                    <div class="text-muted small">{{ clase.profesor.nombre }}</div>
+                                                    {% if clase.unidad %}
+                                                        <div class="badge bg-dark mt-1" style="font-size: 0.6rem;">
+                                                            {% if clase.unidad == 'S' %}Socialización
+                                                            {% elif clase.unidad == 'A' %}Material
+                                                            {% else %}Unidad {{ clase.unidad }}{% endif %}
+                                                        </div>
+                                                    {% endif %}
                                                 {% endif %}
-                                                {% if clase.cancelada %}<br><span class="badge bg-danger">Cancelada</span>{% endif %}
                                             </div>
                                         {% endif %}
                                     {% endwith %}
@@ -107,9 +137,7 @@
                             {% endfor %}
                         </tr>
                         {% endfor %}
-                        {% if not forloop.last %}<tr class="divisor-grado"><td colspan="{{ dias_header|length|add:3 }}"></td></tr>{% endif %}
                     {% endfor %}
-                    {% if not forloop.last %}<tr class="divisor-colegio-doble"><td colspan="{{ dias_header|length|add:3 }}"></td></tr>{% endif %}
                 {% endfor %}
             </tbody>
         </table>
