@@ -4,7 +4,7 @@ from datetime import date, timedelta, datetime
 from collections import defaultdict
 import re
 import json
-from gestion_datos.models import Colegio, Profesor, Libro
+from configuracion.models import Colegio, Profesor, Libro
 from .models import Bloque, Clase, Asignacion
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 
@@ -103,7 +103,7 @@ def obtener_unidades(request):
         'recomendada': unidad_recomendada
     })
     
-def dashboard_cronograma(request):
+def dashboard_colegios(request):
     colegios = Colegio.objects.all().order_by('nombre')
     
     id_col = request.GET.get('id_col')
@@ -201,7 +201,7 @@ def dashboard_cronograma(request):
                 matriz[c.bloque_id][str(c.fecha)] = c
         ctx['matriz'] = matriz
 
-    return render(request, 'cronograma/dashboard.html', ctx)
+    return render(request, 'colegios/dashboard.html', ctx)
 
 @xframe_options_sameorigin
 def configurar_colegio(request, colegio_id):
@@ -252,7 +252,7 @@ def configurar_colegio(request, colegio_id):
     asignaciones = Asignacion.objects.filter(colegio=colegio).order_by('grado')
     libros_unicos = Libro.objects.values_list('titulo', flat=True).distinct()
 
-    return render(request, 'cronograma/configurar_colegio.html', {
+    return render(request, 'colegios/configurar_colegio.html', {
         'colegio': colegio,
         'bloques': bloques,
         'asignaciones': asignaciones,

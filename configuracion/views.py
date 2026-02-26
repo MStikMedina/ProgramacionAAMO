@@ -5,7 +5,7 @@ from django.contrib.auth.decorators import user_passes_test
 from django.shortcuts import get_object_or_404
 
 @user_passes_test(lambda u: u.is_superuser)
-def gestion_libros(request):
+def configuracion_libros(request):
     if request.method == 'POST':
         accion = request.POST.get('accion', 'add')
         
@@ -27,26 +27,26 @@ def gestion_libros(request):
                 nombre_unidad=request.POST.get('nombre_unidad'),
                 link_unidad=request.POST.get('link_unidad')
             )
-        return redirect('gestion_libros')
+        return redirect('configuracion_libros')
 
     libros = Libro.objects.all().order_by('titulo', 'materia', 'unidad')
-    return render(request, 'gestion_datos/libros.html', {'libros': libros})
+    return render(request, 'configuracion/libros.html', {'libros': libros})
 
 @user_passes_test(lambda u: u.is_superuser)
-def gestion_colegios(request):
+def configuracion_colegios(request):
     if request.method == 'POST':
         form = ColegioForm(request.POST)
         if form.is_valid():
             form.save()
-            return redirect('gestion_colegios')
+            return redirect('configuracion_colegios')
     else:
         form = ColegioForm()
     
     colegios = Colegio.objects.all().order_by('nombre')
-    return render(request, 'gestion_datos/colegios.html', {'form': form, 'colegios': colegios})
+    return render(request, 'configuracion/colegios.html', {'form': form, 'colegios': colegios})
 
 @user_passes_test(lambda u: u.is_superuser)
-def gestion_profesores(request):
+def configuracion_profesores(request):
     if request.method == 'POST':
         accion = request.POST.get('accion', 'add') # Por defecto es add si no se envía
         
@@ -64,7 +64,7 @@ def gestion_profesores(request):
                 documento=request.POST.get('documento'),
                 email=request.POST.get('email')
             )
-        return redirect('gestion_profesores')
+        return redirect('configuracion_profesores')
 
     profesores = Profesor.objects.all().order_by('nombre')
-    return render(request, 'gestion_datos/profesores.html', {'profesores': profesores})
+    return render(request, 'configuracion/profesores.html', {'profesores': profesores})

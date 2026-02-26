@@ -1,5 +1,5 @@
 {% extends 'base.html' %}
-{% block header_title %}Cronograma{% endblock %}
+{% block header_title %}Colegios{% endblock %}
 
 {% block content %}
 <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
@@ -269,7 +269,7 @@
 
         // 1. Cargar materias asignadas para esa fecha
         try {
-            let res = await fetch(`/cronograma/ajax/obtener-materias/?colegio_id={{ sel_col.id }}&grado=${grado}&fecha=${fechaISO}`);
+            let res = await fetch(`/colegios/ajax/obtener-materias/?colegio_id={{ sel_col.id }}&grado=${grado}&fecha=${fechaISO}`);
             let materias = await res.json();
             
             selectMat.innerHTML = '<option value="">Seleccionar materia...</option>';
@@ -318,7 +318,7 @@
         selectUni.innerHTML = '<option value="">Cargando unidades...</option>';
         
         // Novedad: URL actualizada enviando el bloque_id y sin el profesor
-        let url = `/cronograma/ajax/obtener-unidades/?colegio_id={{ sel_col.id }}&grado=${grado}&fecha=${fechaISO}&materia=${materia}&bloque_id=${bloqueId}`;
+        let url = `/colegios/ajax/obtener-unidades/?colegio_id={{ sel_col.id }}&grado=${grado}&fecha=${fechaISO}&materia=${materia}&bloque_id=${bloqueId}`;
         
         try {
             let res = await fetch(url);

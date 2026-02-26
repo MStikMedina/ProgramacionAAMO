@@ -1,7 +1,7 @@
 from django.shortcuts import render
 from django.db.models import Prefetch
-from cronograma.models import Bloque, Clase
-from gestion_datos.models import Colegio
+from colegios.models import Bloque, Clase
+from configuracion.models import Colegio
 from datetime import date, timedelta, datetime
 from collections import defaultdict
 import re
@@ -19,7 +19,6 @@ def extraer_minutos(hora_str):
         return 0
 
 def vista_general(request):
-    # --- 1. LÓGICA DE FECHAS (Idéntica al cronograma individual) ---
     tipo_vista = request.GET.get('vista', 'Semana')
     fecha_get = request.GET.get('fecha')
     fecha_ref = datetime.strptime(fecha_get, '%Y-%m-%d').date() if fecha_get else date.today()

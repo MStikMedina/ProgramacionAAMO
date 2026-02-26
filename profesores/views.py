@@ -1,6 +1,6 @@
 from django.shortcuts import render
-from cronograma.models import Clase, Asignacion
-from gestion_datos.models import Profesor, Libro
+from colegios.models import Clase, Asignacion
+from configuracion.models import Profesor, Libro
 from collections import defaultdict
 
 def extraer_minutos(hora_str):

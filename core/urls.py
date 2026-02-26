@@ -1,15 +1,15 @@
 from django.contrib import admin
 from django.urls import path, include
-from gestion_datos.views import gestion_libros, gestion_colegios, gestion_profesores
+from configuracion.views import configuracion_libros, configuracion_colegios, configuracion_profesores
 from .views import home
 
 urlpatterns = [
     path('', home, name='home'),
     path('admin/', admin.site.urls),
-    path('configuracion/libros/', gestion_libros, name='gestion_libros'),
-    path('configuracion/colegios/', gestion_colegios, name='gestion_colegios'),
-    path('configuracion/profesores/', gestion_profesores, name='gestion_profesores'),
-    path('cronograma/', include('cronograma.urls')),
+    path('configuracion/libros/', configuracion_libros, name='configuracion_libros'),
+    path('configuracion/colegios/', configuracion_colegios, name='configuracion_colegios'),
+    path('configuracion/profesores/', configuracion_profesores, name='configuracion_profesores'),
+    path('colegios/', include('colegios.urls')),
     path('profesores/', include('profesores.urls')),
     path('general/', include('general.urls')),
 ]

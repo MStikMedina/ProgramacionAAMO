@@ -62,8 +62,7 @@
 <script>
     function abrirConfiguracion(id, nombre) {
         document.getElementById('nombreColegioModal').innerText = nombre;
-        // Asignamos la ruta que apunta a la nueva vista de cronograma
-        document.getElementById('iframeConfig').src = '/cronograma/configurar-colegio/' + id + '/';
+        document.getElementById('iframeConfig').src = '/colegios/configurar-colegio/' + id + '/';
         var myModal = new bootstrap.Modal(document.getElementById('modalConfigColegio'));
         myModal.show();
     }

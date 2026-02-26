@@ -1,6 +1,6 @@
 from django.contrib import admin
 from django import forms
-from gestion_datos.models import Libro
+from configuracion.models import Libro
 from .models import Bloque, Clase, Asignacion
 
 @admin.register(Bloque)

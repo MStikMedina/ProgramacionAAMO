@@ -161,7 +161,7 @@
             </a>
 
             <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
-                <i class="fas fa-calendar-alt icon-main text-info"></i> Cronograma
+                <i class="fas fa-calendar-alt icon-main text-info"></i> Colegios
             </a>
 
             <a href="{% url 'ver_horario' %}" class="nav-item">
@@ -170,23 +170,23 @@
             
             {% if request.user.is_superuser %}
             <a href="#collapseConfig" data-bs-toggle="collapse" 
-               class="nav-item justify-content-between {% if request.resolver_match.url_name == 'gestion_colegios' or request.resolver_match.url_name == 'gestion_profesores' or request.resolver_match.url_name == 'gestion_libros' %}active{% endif %}" 
-               aria-expanded="{% if request.resolver_match.url_name == 'gestion_colegios' or request.resolver_match.url_name == 'gestion_profesores' or request.resolver_match.url_name == 'gestion_libros' %}true{% else %}false{% endif %}">
+               class="nav-item justify-content-between {% if request.resolver_match.url_name == 'configuracion_colegios' or request.resolver_match.url_name == 'configuracion_profesores' or request.resolver_match.url_name == 'configuracion_libros' %}active{% endif %}" 
+               aria-expanded="{% if request.resolver_match.url_name == 'configuracion_colegios' or request.resolver_match.url_name == 'configuracion_profesores' or request.resolver_match.url_name == 'configuracion_libros' %}true{% else %}false{% endif %}">
                 <div>
                     <i class="fas fa-cogs icon-main text-secondary"></i> Configuración
                 </div>
                 <i class="fas fa-chevron-down" style="font-size: 0.8rem;"></i>
             </a>
             
-            <div class="collapse {% if request.resolver_match.url_name == 'gestion_colegios' or request.resolver_match.url_name == 'gestion_profesores' or request.resolver_match.url_name == 'gestion_libros' %}show{% endif %}" id="collapseConfig">
+            <div class="collapse {% if request.resolver_match.url_name == 'configuracion_colegios' or request.resolver_match.url_name == 'configuracion_profesores' or request.resolver_match.url_name == 'configuracion_libros' %}show{% endif %}" id="collapseConfig">
                 <div class="collapse-inner py-1 bg-dark">
-                    <a href="{% url 'gestion_colegios' %}" class="{% if request.resolver_match.url_name == 'gestion_colegios' %}active{% endif %}">
+                    <a href="{% url 'configuracion_colegios' %}" class="{% if request.resolver_match.url_name == 'configuracion_colegios' %}active{% endif %}">
                         <i class="fas fa-school" style="width: 25px; text-align: center; margin-right: 10px;"></i> Colegios
                     </a>
-                    <a href="{% url 'gestion_profesores' %}" class="{% if request.resolver_match.url_name == 'gestion_profesores' %}active{% endif %}">
+                    <a href="{% url 'configuracion_profesores' %}" class="{% if request.resolver_match.url_name == 'configuracion_profesores' %}active{% endif %}">
                         <i class="fas fa-chalkboard-teacher" style="width: 25px; text-align: center; margin-right: 10px;"></i> Profesores
                     </a>
-                    <a href="{% url 'gestion_libros' %}" class="{% if request.resolver_match.url_name == 'gestion_libros' %}active{% endif %}">
+                    <a href="{% url 'configuracion_libros' %}" class="{% if request.resolver_match.url_name == 'configuracion_libros' %}active{% endif %}">
                         <i class="fas fa-book" style="width: 25px; text-align: center; margin-right: 10px;"></i> Libros
                     </a>
                 </div>

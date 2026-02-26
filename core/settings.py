@@ -46,8 +46,8 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'gestion_datos',
-    'cronograma',
+    'configuracion',
+    'colegios',
     'profesores',
     'general',
 ]

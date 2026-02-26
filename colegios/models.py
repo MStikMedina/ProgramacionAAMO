@@ -1,5 +1,5 @@
 from django.db import models
-from gestion_datos.models import Colegio, Profesor, Libro
+from configuracion.models import Colegio, Profesor, Libro
 from datetime import date
 
 class Bloque(models.Model):

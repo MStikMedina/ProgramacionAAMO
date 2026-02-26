@@ -10,8 +10,7 @@ window.addEventListener('load', function() {
             gradoSelect.innerHTML = '<option value="">---------</option>';
 
             if (colegioId) {
-                // Fíjate que añadimos /cronograma/ al inicio para que coincida con core/urls.py
-                fetch('/cronograma/ajax/cargar-grados/?colegio_id=' + colegioId)
+                fetch('/colegios/ajax/cargar-grados/?colegio_id=' + colegioId)
                     .then(response => {
                         if (!response.ok) throw new Error('Error en la red');
                         return response.json();
