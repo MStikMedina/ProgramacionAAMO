@@ -155,7 +155,11 @@
             <a href="{% url 'home' %}" class="nav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
                 <i class="fas fa-home icon-main"></i> Inicio
             </a>
-            
+
+            <a href="{% url 'vista_general' %}" class="nav-item {% if request.resolver_match.url_name == 'vista_general' %}active{% endif %}">
+                <i class="fas fa-calendar-week icon-main text-success"></i> General
+            </a>
+
             <a href="{% url 'dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'dashboard' %}active{% endif %}">
                 <i class="fas fa-calendar-alt icon-main text-info"></i> Cronograma
             </a>

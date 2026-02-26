@@ -1,0 +1,118 @@
+{% extends 'base.html' %}
+{% load general_tags %}
+{% block header_title %}Cronograma General{% endblock %}
+
+{% block content %}
+<style>
+    .table-container { overflow-x: auto; max-width: 100%; position: relative; }
+    .table-bordered > :not(caption) > * > * { border-width: 1px; }
+    
+    /* Columnas fijas (Sticky) */
+    .sticky-col-1 { position: sticky; left: 0; z-index: 4; background: #e9ecef !important; width: 120px; border-right: 2px solid #dee2e6; font-weight: bold; vertical-align: middle; }
+    .sticky-col-2 { position: sticky; left: 120px; z-index: 3; background: #f8f9fa !important; width: 80px; border-right: 1px solid #dee2e6; vertical-align: middle; }
+    .sticky-col-3 { position: sticky; left: 200px; z-index: 2; background: #fff !important; width: 130px; border-right: 2px solid #adb5bd; }
+    
+    /* Encabezados fijos */
+    thead th.sticky-col-1, thead th.sticky-col-2, thead th.sticky-col-3 { 
+        z-index: 5; background: #212529 !important; color: white; 
+        top: 0; position: sticky;
+    }
+
+    /* Divisores */
+    .divisor-grado td { background-color: #000 !important; height: 4px !important; padding: 0; border: none; }
+    /* NUEVO: Divisor Doble para Colegios */
+    .divisor-colegio-doble td { 
+        border-top: 6px double #000 !important; 
+        height: 6px !important; 
+        padding: 0; background: #000;
+    }
+
+    .cell-hover:hover { background-color: #f1f8ff !important; transition: 0.2s; }
+    
+    /* Estilos de eventos y cancelaciones (Reutilizados) */
+    .evento-style { border-left: 4px solid #ffc107; background-color: #fff3cd; }
+    .cancelada-style { border-left: 4px solid #dc3545; background-color: #f8d7da; text-decoration: line-through; opacity: 0.8; }
+    .normal-style { border-left: 4px solid #0d6efd; background-color: #f0f7ff; }
+</style>
+
+<div class="container-fluid py-3">
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-body">
+            <div class="row align-items-center">
+                <div class="col-md-4 text-center">
+                    <div class="btn-group w-100 shadow-sm">
+                        <a href="?vista=Semana&fecha={{ fecha_input }}" class="btn btn-sm {% if tipo_vista == 'Semana' %}btn-primary{% else %}btn-outline-primary{% endif %}">Semana</a>
+                        <a href="?vista=Mes&fecha={{ fecha_input }}" class="btn btn-sm {% if tipo_vista == 'Mes' %}btn-primary{% else %}btn-outline-primary{% endif %}">Mes</a>
+                        <a href="?vista=Año&fecha={{ fecha_input }}" class="btn btn-sm {% if tipo_vista == 'Año' %}btn-primary{% else %}btn-outline-primary{% endif %}">Año</a>
+                    </div>
+                </div>
+                <div class="col-md-6 d-flex align-items-center gap-2">
+                    <a href="?vista={{ tipo_vista }}&fecha={{ fecha_ant }}" class="btn btn-dark btn-sm">◀ Anterior</a>
+                    <input type="date" class="form-control form-control-sm text-center shadow-sm" value="{{ fecha_input }}" onchange="window.location.href='?vista={{ tipo_vista }}&fecha=' + this.value">
+                    <a href="?vista={{ tipo_vista }}&fecha={{ fecha_sig }}" class="btn btn-dark btn-sm">Siguiente ▶</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="table-container shadow-sm rounded border" style="max-height: 80vh; overflow-y: auto;">
+        <table class="table table-bordered text-center align-middle bg-white mb-0 table-sm">
+            <thead class="table-dark">
+                <tr>
+                    <th class="sticky-col-1">Colegio</th>
+                    <th class="sticky-col-2">Grado</th>
+                    <th class="sticky-col-3">Horario</th>
+                    {% for dia in dias_header %}
+                    <th style="min-width: 150px;">
+                        <span>{{ dia|date:"D d" }}</span> <small class="text-uppercase">{{ dia|date:"M" }}</small>
+                    </th>
+                    {% endfor %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for datos_col in estructura_general %}
+                    {% for grado_data in datos_col.grados_data %}
+                        {% for bloque in grado_data.bloques %}
+                        <tr>
+                            {% if forloop.parentloop.first and forloop.first %}
+                                <td rowspan="{{ datos_col.total_rowspan }}" class="sticky-col-1 bg-light text-primary">{{ datos_col.colegio.nombre }}</td>
+                            {% endif %}
+
+                            {% if forloop.first %}
+                                <td rowspan="{{ grado_data.rowspan }}" class="sticky-col-2 fw-bold">{{ grado_data.nombre_grado }}</td>
+                            {% endif %}
+                            
+                            <td class="sticky-col-3 hora-plana">{{ bloque.hora }}</td>
+
+                            {% for dia in dias_header %}
+                                {% with dia_str=dia|date:"Y-m-d" %}
+                                <td class="p-0 position-relative cell-hover" style="height: 45px; vertical-align: top;">
+                                    {% with clase=matriz|get_item:bloque.id|get_item:dia_str %}
+                                        {% if clase %}
+                                            <div class="p-1 text-start h-100 small 
+                                                {% if clase.cancelada %}cancelada-style{% elif clase.es_evento %}evento-style{% else %}normal-style{% endif %}" 
+                                                style="line-height: 1;">
+                                                {% if clase.es_evento %}
+                                                    <strong>Letra: {{ clase.titulo_evento }}</strong>
+                                                {% else %}
+                                                    <strong>Letra: {{ clase.materia }}</strong><br>
+                                                    <span class="text-muted">{{ clase.profesor.nombre|default:"-" }}</span>
+                                                {% endif %}
+                                                {% if clase.cancelada %}<br><span class="badge bg-danger">Cancelada</span>{% endif %}
+                                            </div>
+                                        {% endif %}
+                                    {% endwith %}
+                                </td>
+                                {% endwith %}
+                            {% endfor %}
+                        </tr>
+                        {% endfor %}
+                        {% if not forloop.last %}<tr class="divisor-grado"><td colspan="{{ dias_header|length|add:3 }}"></td></tr>{% endif %}
+                    {% endfor %}
+                    {% if not forloop.last %}<tr class="divisor-colegio-doble"><td colspan="{{ dias_header|length|add:3 }}"></td></tr>{% endif %}
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     'gestion_datos',
     'cronograma',
     'profesores',
+    'general',
 ]
 
 MIDDLEWARE = [

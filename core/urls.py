@@ -11,4 +11,5 @@ urlpatterns = [
     path('configuracion/profesores/', gestion_profesores, name='gestion_profesores'),
     path('cronograma/', include('cronograma.urls')),
     path('profesores/', include('profesores.urls')),
+    path('general/', include('general.urls')),
 ]
