@@ -63,7 +63,9 @@
                                onchange="window.location.href='?id_col={{ sel_col.id }}&vista={{ tipo_vista }}&fecha=' + this.value">
                     </div>
                     <a href="?id_col={{ sel_col.id }}&vista={{ tipo_vista }}&fecha={{ fecha_sig }}" class="btn btn-dark btn-sm">Siguiente ▶</a>
+                    {% if request.user.is_staff %}
                     <a href="/admin" class="btn btn-outline-danger btn-sm" title="Ir al Panel de Administración"><i class="fas fa-user-shield"></i></a>
+                    {% endif %}
                 </div>
             </div>
         </div>
@@ -95,8 +97,12 @@
                         
                         {% for dia in dias_header %}
                             {% with dia_str=dia|date:"Y-m-d" dia_legible=dia|date:"D d M" %}
+                                {% if request.user.is_staff %}
                                 <td class="p-0 position-relative cell-hover" style="height: 50px; vertical-align: top; cursor: pointer;"
                                     ondblclick="prepararModal('{{ bloque.id }}', '{{ grado }}', '{{ bloque.hora }}', '{{ dia_str }}', '{{ dia_legible }}')">
+                                {% else %}
+                                <td class="p-0 position-relative cell-hover" style="height: 50px; vertical-align: top;">
+                                {% endif %}
                                     
                                     {% for bid, fechas in matriz.items %}
                                         {% if bid == bloque.id %}
@@ -245,6 +251,7 @@
 </div>
 {% endif %}
 
+{% if request.user.is_staff %}
 <div class="modal fade" id="modalClase" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" class="modal-content">
@@ -317,6 +324,7 @@
         </form>
     </div>
 </div>
+{% endif %}
 
 <script>
     $(document).ready(function() {

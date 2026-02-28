@@ -127,34 +127,36 @@ def dashboard_colegios(request):
 
         # --- PROCESAR GUARDADO O ELIMINACIÓN DE CLASE ---
         if request.method == "POST" and 'guardar_clase' in request.POST:
-            bloque_id = request.POST.get('bloque_id')
-            fecha_clase = request.POST.get('fecha_clase')
-            eliminar = request.POST.get('eliminar_clase')
+            # Candado de seguridad: Solo administradores pueden guardar o borrar clases
+            if request.user.is_staff:
+                bloque_id = request.POST.get('bloque_id')
+                fecha_clase = request.POST.get('fecha_clase')
+                eliminar = request.POST.get('eliminar_clase')
 
-            if eliminar == "1":
-                Clase.objects.filter(colegio=sel_col, bloque_id=bloque_id, fecha=fecha_clase).delete()
-            else:
-                profesor_id = request.POST.get('profesor')
-                
-                # Atrapamos los nuevos campos del formulario
-                es_evento = request.POST.get('es_evento') == 'on'
-                cancelada = request.POST.get('cancelada') == 'on'
-                
-                Clase.objects.update_or_create(
-                    colegio=sel_col,
-                    bloque_id=bloque_id,
-                    fecha=fecha_clase,
-                    defaults={
-                        'profesor_id': profesor_id if profesor_id else None,
-                        'materia': request.POST.get('materia'),
-                        'unidad': request.POST.get('unidad'),
-                        # Guardamos los nuevos datos en la base de datos
-                        'es_evento': es_evento,
-                        'titulo_evento': request.POST.get('titulo_evento'),
-                        'cancelada': cancelada,
-                        'comentarios': request.POST.get('comentarios')
-                    }
-                )
+                if eliminar == "1":
+                    Clase.objects.filter(colegio=sel_col, bloque_id=bloque_id, fecha=fecha_clase).delete()
+                else:
+                    profesor_id = request.POST.get('profesor')
+                    
+                    # Atrapamos los nuevos campos del formulario
+                    es_evento = request.POST.get('es_evento') == 'on'
+                    cancelada = request.POST.get('cancelada') == 'on'
+                    
+                    Clase.objects.update_or_create(
+                        colegio=sel_col,
+                        bloque_id=bloque_id,
+                        fecha=fecha_clase,
+                        defaults={
+                            'profesor_id': profesor_id if profesor_id else None,
+                            'materia': request.POST.get('materia'),
+                            'unidad': request.POST.get('unidad'),
+                            # Guardamos los nuevos datos en la base de datos
+                            'es_evento': es_evento,
+                            'titulo_evento': request.POST.get('titulo_evento'),
+                            'cancelada': cancelada,
+                            'comentarios': request.POST.get('comentarios')
+                        }
+                    )
             return redirect(request.get_full_path())
         
         # --- LÓGICA DE RANGOS DE FECHA ---
