@@ -165,6 +165,86 @@
     {% endif %}
 </div>
 
+{% if request.user.is_staff %}
+<div class="card mt-4 mb-4 shadow-sm border-0 border-top border-danger border-3">
+        <div class="card-header bg-white py-3">
+            <h5 class="mb-0 text-danger fw-bold"><i class="fas fa-exclamation-triangle"></i> Auditoría de Errores y Conflictos</h5>
+            <small class="text-muted">Se muestran las alertas de toda la plataforma. Los errores marcados en rojo pertenecen al colegio que estás viendo actualmente.</small>
+        </div>
+        <div class="card-body p-0">
+            <div class="accordion accordion-flush" id="accordionErrores">
+                
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingDuplicados">
+                        <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseDuplicados">
+                            <i class="fas fa-copy text-warning me-2"></i> Unidades Duplicadas 
+                            {% if errores_duplicados %}<span class="badge bg-danger ms-2 rounded-pill">{{ errores_duplicados|length }}</span>{% endif %}
+                        </button>
+                    </h2>
+                    <div id="collapseDuplicados" class="accordion-collapse collapse" data-bs-parent="#accordionErrores">
+                        <div class="accordion-body p-0">
+                            <ul class="list-group list-group-flush">
+                                {% for error in errores_duplicados %}
+                                <li class="list-group-item {% if sel_col and sel_col.nombre == error.colegio %}bg-danger bg-opacity-10 border-start border-danger border-4{% endif %}">
+                                    <strong>{{ error.colegio }}:</strong> {{ error.mensaje }}
+                                </li>
+                                {% empty %}
+                                <li class="list-group-item text-muted text-center py-3"><i class="fas fa-check-circle text-success me-1"></i> No se detectaron unidades duplicadas.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingProfesores">
+                        <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseProfesores">
+                            <i class="fas fa-user-times text-warning me-2"></i> Choques de Profesores
+                            {% if errores_profesores %}<span class="badge bg-danger ms-2 rounded-pill">{{ errores_profesores|length }}</span>{% endif %}
+                        </button>
+                    </h2>
+                    <div id="collapseProfesores" class="accordion-collapse collapse" data-bs-parent="#accordionErrores">
+                        <div class="accordion-body p-0">
+                            <ul class="list-group list-group-flush">
+                                {% for error in errores_profesores %}
+                                <li class="list-group-item {% if sel_col and sel_col.nombre in error.colegios_implicados %}bg-danger bg-opacity-10 border-start border-danger border-4{% endif %}">
+                                    <i class="fas fa-user-graduate text-muted me-1"></i> {{ error.mensaje }}
+                                </li>
+                                {% empty %}
+                                <li class="list-group-item text-muted text-center py-3"><i class="fas fa-check-circle text-success me-1"></i> No hay profesores cruzados en colegios distintos.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="accordion-item">
+                    <h2 class="accordion-header" id="headingSecuencias">
+                        <button class="accordion-button collapsed fw-bold" type="button" data-bs-toggle="collapse" data-bs-target="#collapseSecuencias">
+                            <i class="fas fa-sort-numeric-down-alt text-warning me-2"></i> Saltos de Secuencia
+                            {% if errores_secuencias %}<span class="badge bg-danger ms-2 rounded-pill">{{ errores_secuencias|length }}</span>{% endif %}
+                        </button>
+                    </h2>
+                    <div id="collapseSecuencias" class="accordion-collapse collapse" data-bs-parent="#accordionErrores">
+                        <div class="accordion-body p-0">
+                            <ul class="list-group list-group-flush">
+                                {% for error in errores_secuencias %}
+                                <li class="list-group-item {% if sel_col and sel_col.nombre == error.colegio %}bg-danger bg-opacity-10 border-start border-danger border-4{% endif %}">
+                                    <strong>{{ error.colegio }}:</strong> {{ error.mensaje }}
+                                </li>
+                                {% empty %}
+                                <li class="list-group-item text-muted text-center py-3"><i class="fas fa-check-circle text-success me-1"></i> Las unidades mantienen un orden lógico correcto.</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
 <div class="modal fade" id="modalClase" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" class="modal-content">

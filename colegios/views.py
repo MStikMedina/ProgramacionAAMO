@@ -200,6 +200,81 @@ def dashboard_colegios(request):
             if c.bloque_id in matriz:
                 matriz[c.bloque_id][str(c.fecha)] = c
         ctx['matriz'] = matriz
+        
+    # =========================================================
+    # MOTOR DE AUDITORÍA Y ERRORES (Solo para Administradores)
+    # =========================================================
+    if request.user.is_staff:
+        año_actual = date.today().year
+        
+        todas_clases = Clase.objects.filter(
+            fecha__year=año_actual,
+            es_evento=False,
+            cancelada=False
+        ).select_related('colegio', 'bloque', 'profesor').order_by('fecha', 'bloque__orden', 'id')
+
+        mapa_unidades = defaultdict(list)
+        mapa_profesores = defaultdict(set)
+        mapa_secuencia = defaultdict(list)
+
+        for c in todas_clases:
+            if not c.materia or not c.unidad:
+                continue
+                
+            grado = c.bloque.grado
+            col_nombre = c.colegio.nombre
+
+            if str(c.unidad).isdigit():
+                mapa_unidades[(col_nombre, grado, c.materia, c.unidad)].append(c)
+
+            if c.profesor_id:
+                mapa_profesores[(c.profesor.nombre, c.fecha)].add(col_nombre)
+
+            mapa_secuencia[(col_nombre, grado, c.materia)].append(c)
+
+        errores_duplicados = []
+        for key, clases_list in mapa_unidades.items():
+            if len(clases_list) > 1:
+                col, gr, mat, uni = key
+                fechas = [cl.fecha.strftime('%d-%b') for cl in clases_list]
+                errores_duplicados.append({
+                    'colegio': col,
+                    'mensaje': f"El grado {gr} tiene programada la unidad {uni} de {mat} {len(clases_list)} veces (Fechas: {', '.join(fechas)})."
+                })
+
+        errores_profesores = []
+        for key, colegios_set in mapa_profesores.items():
+            if len(colegios_set) > 1:
+                profe_nombre, fecha = key
+                errores_profesores.append({
+                    'colegio': list(colegios_set),
+                    'colegios_implicados': list(colegios_set),
+                    'mensaje': f"El profesor {profe_nombre} tiene clases en {len(colegios_set)} colegios distintos el {fecha.strftime('%d-%b')} ({' y '.join(colegios_set)})."
+                })
+
+        errores_secuencias = []
+        for key, clases_list in mapa_secuencia.items():
+            col, gr, mat = key
+            ultima_unidad = None
+            for cl in clases_list:
+                if str(cl.unidad).isdigit():
+                    unidad_actual = int(cl.unidad)
+                    if ultima_unidad is not None:
+                        if unidad_actual > ultima_unidad + 1 or unidad_actual < ultima_unidad:
+                            errores_secuencias.append({
+                                'colegio': col,
+                                'mensaje': f"Salto de secuencia en el grado {gr} para {mat}. Pasó de la unidad {ultima_unidad} a la {unidad_actual} el {cl.fecha.strftime('%d-%b')}."
+                            })
+                    ultima_unidad = unidad_actual
+
+        nombre_sel = ctx['sel_col'].nombre if ctx.get('sel_col') else ""
+
+        def sort_errors(err_list):
+            return sorted(err_list, key=lambda x: 0 if x['colegio'] == nombre_sel or (x.get('colegios_implicados') and nombre_sel in x['colegios_implicados']) else 1)
+
+        ctx['errores_duplicados'] = sort_errors(errores_duplicados)
+        ctx['errores_profesores'] = sort_errors(errores_profesores)
+        ctx['errores_secuencias'] = sort_errors(errores_secuencias)
 
     return render(request, 'colegios/dashboard.html', ctx)
 
