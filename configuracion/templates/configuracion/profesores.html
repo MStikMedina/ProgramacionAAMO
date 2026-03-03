@@ -1,121 +1,332 @@
 {% extends 'base.html' %}
 {% block header_title %}Crear Profesores{% endblock %}
 {% block content %}
+
+<style>
+  .form-section-title {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #6c757d;
+    font-weight: 700;
+    border-bottom: 1px solid #dee2e6;
+    padding-bottom: 4px;
+    margin-bottom: 10px;
+    margin-top: 14px;
+  }
+</style>
+
 <div class="row">
-    <div class="col-md-4">
-        <div class="card shadow-sm mb-4">
-    <div class="card-header bg-warning text-dark fw-bold">
+  <!-- FORMULARIO IZQUIERDA -->
+  <div class="col-md-4">
+    <div class="card shadow-sm mb-4">
+      <div class="card-header bg-warning text-dark fw-bold">
         <i class="fas fa-user-plus"></i> Nuevo Profesor
-    </div>
-    <div class="card-body">
-        <form method="POST">
-            {% csrf_token %}
-            <input type="hidden" name="accion" value="add">
-            
-            <div class="mb-3">
-                <label class="form-label fw-bold">Nombre</label>
-                <input type="text" name="nombre" class="form-control" placeholder="Ej: Juan Pérez" required>
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label fw-bold">Documento</label>
-                <input type="text" name="documento" class="form-control" placeholder="Ej: 1098...">
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label fw-bold">Email</label>
-                <input type="email" name="email" class="form-control" placeholder="juan@email.com">
-            </div>
-            
-            <button type="submit" class="btn btn-warning w-100 fw-bold">Guardar Profesor</button>
+      </div>
+      <div class="card-body" style="max-height: 80vh; overflow-y: auto;">
+        <form method="POST" id="formNuevoProfesor">
+          {% csrf_token %}
+          <input type="hidden" name="accion" value="add">
+
+          <p class="form-section-title">Datos Personales</p>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">Nombre(s) <span class="text-danger">*</span></label>
+            <input type="text" name="nombre" class="form-control form-control-sm" placeholder="Ej: Juan Carlos" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">Apellido(s) <span class="text-danger">*</span></label>
+            <input type="text" name="apellido" class="form-control form-control-sm" placeholder="Ej: Pérez Gómez" required>
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">Documento</label>
+            <input type="text" name="documento" class="form-control form-control-sm" placeholder="Ej: 1098...">
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">Fecha de Nacimiento</label>
+            <input type="date" name="fecha_nacimiento" class="form-control form-control-sm">
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">Estado Civil</label>
+            <select name="estado_civil" class="form-select form-select-sm">
+              <option value="">-- Seleccionar --</option>
+              <option>Soltero/a</option><option>Casado/a</option>
+              <option>Unión libre</option><option>Divorciado/a</option><option>Viudo/a</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">Talla Camisa</label>
+            <input type="text" name="talla_camisa" class="form-control form-control-sm" placeholder="Ej: M, L, XL">
+          </div>
+
+          <p class="form-section-title">Contacto</p>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">Celular</label>
+            <input type="text" name="celular" class="form-control form-control-sm" placeholder="Ej: 300...">
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">Correo Electrónico</label>
+            <input type="email" name="email" class="form-control form-control-sm" placeholder="juan@email.com">
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">Ciudad</label>
+            <input type="text" name="ciudad" class="form-control form-control-sm" placeholder="Ej: Bucaramanga">
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">Dirección</label>
+            <input type="text" name="direccion" class="form-control form-control-sm" placeholder="Ej: Cra 10 # 20-30">
+          </div>
+
+          <p class="form-section-title">Información Laboral</p>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">Área / Materia que dicta</label>
+            <input type="text" name="area_materia" class="form-control form-control-sm" placeholder="Ej: Matemáticas, Física">
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">Disponibilidad</label>
+            <input type="text" name="disponibilidad" class="form-control form-control-sm" placeholder="Ej: Sábados">
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">EPS</label>
+            <input type="text" name="eps" class="form-control form-control-sm" placeholder="Ej: Sura, Compensar">
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">Fondo de Pensión</label>
+            <input type="text" name="fondo_pension" class="form-control form-control-sm" placeholder="Ej: Porvenir, Colpensiones">
+          </div>
+
+          <p class="form-section-title">Datos Bancarios</p>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">Banco</label>
+            <select name="banco" class="form-select form-select-sm">
+              <option value="">-- Seleccionar --</option>
+              <option>Nequi</option><option>Bancolombia</option>
+              <option>Banco de Bogotá</option><option>Davivienda</option>
+              <option>Daviplata</option><option>Nu</option>
+            </select>
+          </div>
+          <div class="mb-2">
+            <label class="form-label fw-bold small">Tipo de Cuenta</label>
+            <select name="tipo_cuenta" class="form-select form-select-sm">
+              <option value="">-- Seleccionar --</option>
+              <option>Ahorros</option><option>Corriente</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label fw-bold small">Número de Cuenta</label>
+            <input type="text" name="cuenta_bancaria" class="form-control form-control-sm" placeholder="Ej: 123456789">
+          </div>
+
+          <button type="submit" class="btn btn-warning w-100 fw-bold">
+            <i class="fas fa-save"></i> Guardar Profesor
+          </button>
         </form>
+      </div>
     </div>
+  </div>
+
+  <!-- TABLA DERECHA -->
+  <div class="col-md-8">
+    <div class="card">
+      <div class="card-header">Listado de Profesores</div>
+      <div class="table-responsive">
+        <table class="table table-striped table-hover align-middle">
+          <thead class="table-dark">
+            <tr>
+              <th>Nombre</th>
+              <th>Documento</th>
+              <th>Email</th>
+              <th class="text-end">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for p in profesores %}
+            <tr>
+              <td>{{ p.nombre_corto }}</td>
+              <td>{{ p.documento }}</td>
+              <td>{{ p.email }}</td>
+              <td class="text-end text-nowrap">
+                <button type="button" class="btn btn-sm btn-outline-primary py-0 me-1"
+                        data-id="{{ p.id }}"
+                        data-nombre="{{ p.nombre }}"
+                        data-apellido="{{ p.apellido }}"
+                        data-doc="{{ p.documento }}"
+                        data-email="{{ p.email }}"
+                        data-ciudad="{{ p.ciudad }}"
+                        data-celular="{{ p.celular }}"
+                        data-direccion="{{ p.direccion }}"
+                        data-cuenta="{{ p.cuenta_bancaria }}"
+                        data-banco="{{ p.banco }}"
+                        data-tipo-cuenta="{{ p.tipo_cuenta }}"
+                        data-area="{{ p.area_materia }}"
+                        data-disponibilidad="{{ p.disponibilidad }}"
+                        data-eps="{{ p.eps }}"
+                        data-pension="{{ p.fondo_pension }}"
+                        data-estado-civil="{{ p.estado_civil }}"
+                        data-talla="{{ p.talla_camisa }}"
+                        data-nacimiento="{{ p.fecha_nacimiento|date:'Y-m-d' }}"
+                        onclick="editarProfesor(this.dataset)">
+                  <i class="fas fa-edit"></i>
+                </button>
+                <form method="POST" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar este profesor?');">
+                  {% csrf_token %}
+                  <input type="hidden" name="accion" value="del">
+                  <input type="hidden" name="profesor_id" value="{{ p.id }}">
+                  <button type="submit" class="btn btn-sm btn-outline-danger py-0"><i class="fas fa-trash"></i></button>
+                </form>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
 </div>
-    </div>
-    <div class="col-md-8">
-        <div class="card">
-            <div class="card-header">Listado de Profesores</div>
-            <div class="table-responsive">
-                <table class="table table-striped table-hover align-middle">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Nombre</th>
-                            <th>Documento</th>
-                            <th>Email</th>
-                            <th class="text-end">Acciones</th> </tr>
-                    </thead>
-                    <tbody>
-                        {% for p in profesores %}
-                        <tr>
-                            <td>{{ p.nombre }}</td>
-                            <td>{{ p.documento }}</td>
-                            <td>{{ p.email }}</td>
-                            
-                            <td class="text-end text-nowrap">
-                                
-                                <button type="button" class="btn btn-sm btn-outline-primary py-0 me-1" 
-                                        data-id="{{ p.id }}" data-nombre="{{ p.nombre }}" data-doc="{{ p.documento }}" data-email="{{ p.email }}"
-                                        onclick="editarProfesor(this.dataset.id, this.dataset.nombre, this.dataset.doc, this.dataset.email)">
-                                    <i class="fas fa-edit"></i>
-                                </button>
 
-                                <form method="POST" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar este profesor?');">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="accion" value="del">
-                                    <input type="hidden" name="profesor_id" value="{{ p.id }}">
-                                    <button type="submit" class="btn btn-sm btn-outline-danger py-0"><i class="fas fa-trash"></i></button>
-                                </form>
-
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
-
+<!-- MODAL EDITAR (con todos los campos) -->
 <div class="modal fade" id="modalEditProfesor" tabindex="-1">
-    <div class="modal-dialog">
-        <form method="POST" class="modal-content">
-            {% csrf_token %}
-            <input type="hidden" name="accion" value="edit">
-            <input type="hidden" name="profesor_id" id="edit_profesor_id">
-            
-            <div class="modal-header bg-warning text-dark">
-                <h5 class="modal-title"><i class="fas fa-edit"></i> Editar Profesor</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-            </div>
-            <div class="modal-body">
-                <div class="mb-2">
-                    <label class="form-label fw-bold">Nombre</label>
-                    <input type="text" name="nombre" id="edit_profesor_nombre" class="form-control" required>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label fw-bold">Documento</label>
-                    <input type="text" name="documento" id="edit_profesor_doc" class="form-control">
-                </div>
-                <div class="mb-2">
-                    <label class="form-label fw-bold">Email</label>
-                    <input type="email" name="email" id="edit_profesor_email" class="form-control">
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                <button type="submit" class="btn btn-warning">Guardar Cambios</button>
-            </div>
-        </form>
-    </div>
+  <div class="modal-dialog modal-lg">
+    <form method="POST" class="modal-content">
+      {% csrf_token %}
+      <input type="hidden" name="accion" value="edit">
+      <input type="hidden" name="profesor_id" id="edit_id">
+
+      <div class="modal-header bg-warning text-dark">
+        <h5 class="modal-title"><i class="fas fa-edit"></i> Editar Profesor</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+      </div>
+
+      <div class="modal-body" style="max-height: 70vh; overflow-y: auto;">
+        <style>
+          .form-section-title { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.08em;
+            color: #6c757d; font-weight: 700; border-bottom: 1px solid #dee2e6;
+            padding-bottom: 4px; margin-bottom: 10px; margin-top: 14px; }
+        </style>
+
+        <p class="form-section-title">Datos Personales</p>
+        <div class="row g-2">
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Nombre(s)</label>
+            <input type="text" name="nombre" id="edit_nombre" class="form-control form-control-sm" required>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label fw-bold small">Apellido(s)</label>
+            <input type="text" name="apellido" id="edit_apellido" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Documento</label>
+            <input type="text" name="documento" id="edit_doc" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Fecha de Nacimiento</label>
+            <input type="date" name="fecha_nacimiento" id="edit_nacimiento" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Estado Civil</label>
+            <select name="estado_civil" id="edit_estado_civil" class="form-select form-select-sm">
+              <option value="">-- Seleccionar --</option>
+              <option>Soltero/a</option><option>Casado/a</option>
+              <option>Unión libre</option><option>Divorciado/a</option><option>Viudo/a</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Talla Camisa</label>
+            <input type="text" name="talla_camisa" id="edit_talla" class="form-control form-control-sm">
+          </div>
+        </div>
+
+        <p class="form-section-title">Contacto</p>
+        <div class="row g-2">
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Celular</label>
+            <input type="text" name="celular" id="edit_celular" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Correo Electrónico</label>
+            <input type="email" name="email" id="edit_email" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Ciudad</label>
+            <input type="text" name="ciudad" id="edit_ciudad" class="form-control form-control-sm">
+          </div>
+          <div class="col-12">
+            <label class="form-label fw-bold small">Dirección</label>
+            <input type="text" name="direccion" id="edit_direccion" class="form-control form-control-sm">
+          </div>
+        </div>
+
+        <p class="form-section-title">Información Laboral</p>
+        <div class="row g-2">
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Área / Materia</label>
+            <input type="text" name="area_materia" id="edit_area" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Disponibilidad</label>
+            <input type="text" name="disponibilidad" id="edit_disponibilidad" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">EPS</label>
+            <input type="text" name="eps" id="edit_eps" class="form-control form-control-sm">
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Fondo de Pensión</label>
+            <input type="text" name="fondo_pension" id="edit_pension" class="form-control form-control-sm">
+          </div>
+        </div>
+
+        <p class="form-section-title">Datos Bancarios</p>
+        <div class="row g-2">
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Banco</label>
+            <select name="banco" id="edit_banco" class="form-select form-select-sm">
+              <option>Nequi</option><option>Bancolombia</option>
+              <option>Banco de Bogotá</option><option>Davivienda</option>
+              <option>Daviplata</option><option>Nu</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Tipo de Cuenta</label>
+            <select name="tipo_cuenta" id="edit_tipo_cuenta" class="form-select form-select-sm">
+              <option>Ahorros</option><option>Corriente</option>
+            </select>
+          </div>
+          <div class="col-md-4">
+            <label class="form-label fw-bold small">Número de Cuenta</label>
+            <input type="text" name="cuenta_bancaria" id="edit_cuenta" class="form-control form-control-sm">
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+        <button type="submit" class="btn btn-warning fw-bold">Guardar Cambios</button>
+      </div>
+    </form>
+  </div>
 </div>
 
 <script>
-    function editarProfesor(id, nombre, doc, email) {
-        document.getElementById('edit_profesor_id').value = id;
-        document.getElementById('edit_profesor_nombre').value = nombre;
-        document.getElementById('edit_profesor_doc').value = doc;
-        document.getElementById('edit_profesor_email').value = email;
-        new bootstrap.Modal(document.getElementById('modalEditProfesor')).show();
-    }
+function editarProfesor(d) {
+  document.getElementById('edit_id').value           = d.id;
+  document.getElementById('edit_nombre').value       = d.nombre;
+  document.getElementById('edit_apellido').value     = d.apellido || '';
+  document.getElementById('edit_doc').value          = d.doc || '';
+  document.getElementById('edit_email').value        = d.email || '';
+  document.getElementById('edit_ciudad').value       = d.ciudad || '';
+  document.getElementById('edit_celular').value      = d.celular || '';
+  document.getElementById('edit_direccion').value    = d.direccion || '';
+  document.getElementById('edit_cuenta').value       = d.cuenta || '';
+  document.getElementById('edit_banco').value        = d.banco || '';
+  document.getElementById('edit_tipo_cuenta').value  = d.tipoCuenta || '';
+  document.getElementById('edit_area').value         = d.area || '';
+  document.getElementById('edit_disponibilidad').value = d.disponibilidad || '';
+  document.getElementById('edit_eps').value          = d.eps || '';
+  document.getElementById('edit_pension').value      = d.pension || '';
+  document.getElementById('edit_estado_civil').value = d.estadoCivil || '';
+  document.getElementById('edit_talla').value        = d.talla || '';
+  document.getElementById('edit_nacimiento').value   = d.nacimiento || '';
+  new bootstrap.Modal(document.getElementById('modalEditProfesor')).show();
+}
 </script>
 {% endblock %}
