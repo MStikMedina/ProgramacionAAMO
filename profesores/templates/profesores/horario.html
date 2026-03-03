@@ -21,8 +21,8 @@
 <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 
 <div class="card mb-4 border-0 shadow-sm">
-    <div class="card-body">
-        <form method="GET" id="formBusqueda">
+    <div class="card-body d-flex justify-content-between align-items-end flex-wrap gap-3">
+        <form method="GET" id="formBusqueda" class="flex-grow-1">
             <label class="fw-bold mb-2 small text-uppercase text-muted">Seleccione su nombre:</label>
             <select name="profesor_id" id="buscador_profesor" class="form-select">
                 <option value="">--- Buscar Profesor ---</option>
@@ -31,6 +31,13 @@
                 {% endfor %}
             </select>
         </form>
+        {% if request.user.is_staff and profesor_sel %}
+        <div>
+            <button class="btn btn-warning text-dark fw-bold border border-warning" onclick="abrirNuevoParticular()">
+                <i class="fas fa-plus-circle"></i> Programar Particular
+            </button>
+        </div>
+        {% endif %}
     </div>
 </div>
 
@@ -54,8 +61,15 @@
             <div class="clases-container">
                 {% for item in grupo.clases %}
                 <div class="columna-clase">
-                    <div class="celda">
-                        <a href="{{ item.maps_link }}" target="_blank" class="link-azul">{{ item.clase.colegio.nombre }}</a>
+                    <div class="celda position-relative">
+                        <a href="{{ item.maps_link }}" target="_blank" class="link-azul text-truncate" style="max-width: 85%;">{{ item.clase.colegio.nombre }}</a>
+                        
+                        {% if request.user.is_staff and item.es_particular %}
+                        <button class="btn btn-sm text-warning p-0 border-0 position-absolute" style="right: 8px;" title="Editar Clase Particular"
+                            onclick="abrirEditarParticular('{{ item.particular_id }}', '{{ item.raw_data.estudiante|escapejs }}', '{{ item.raw_data.ciudad|escapejs }}', '{{ item.maps_link|escapejs }}', '{{ item.raw_data.fecha }}', '{{ item.raw_data.hora|escapejs }}', '{{ item.raw_data.grado|escapejs }}', '{{ item.material|escapejs }}', '{{ item.raw_data.materia|escapejs }}', '{{ item.raw_data.unidad|escapejs }}')">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        {% endif %}
                     </div>
                     <div class="celda">{{ item.clase.colegio.ciudad }}</div>
                     <div class="celda fw-bold text-dark">{{ item.clase.bloque.hora }}</div>
@@ -102,4 +116,193 @@
         });
     });
 </script>
+
+{% if request.user.is_staff and profesor_sel %}
+<div class="modal fade" id="modalParticular" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <form method="POST" id="formParticular" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="guardar_particular" id="modal_part_accion" value="1">
+            <input type="hidden" name="particular_id" id="modal_part_id" value="">
+            <input type="hidden" name="profesor_id" value="{{ profesor_sel }}">
+            
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title fw-bold" id="tituloModalPart"><i class="fas fa-chalkboard-teacher"></i> Programar Clase Particular</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Niño / Estudiante</label>
+                        <input type="text" name="estudiante" id="input_estudiante" class="form-control" placeholder="Ej: Juan Pérez" required>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label fw-bold">Ciudad</label>
+                        <input type="text" name="ciudad" id="input_ciudad" class="form-control" placeholder="Ej: Bucaramanga" required>
+                    </div>
+                    <div class="col-12">
+                        <label class="form-label fw-bold">Enlace de Maps</label>
+                        <input type="url" name="mapa_link" id="input_mapa" class="form-control" placeholder="https://maps.app.goo.gl/..." required>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Fecha</label>
+                        <input type="date" name="fecha" id="input_fecha" class="form-control" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Hora</label>
+                        <input type="text" name="hora" id="input_hora" class="form-control" placeholder="Ej: 10:00 - 12:00" required>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Grado</label>
+                        <input type="text" name="grado" id="input_grado" class="form-control" placeholder="Ej: 11 - 1" required>
+                    </div>
+                </div>
+
+                <div class="row g-3 mb-3">
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Libro / Material</label>
+                        <select name="material" id="modal_material_part" class="form-select" required>
+                            <option value="">Seleccionar libro...</option>
+                            {% for libro in todos_libros %}
+                            <option value="{{ libro }}">{{ libro }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Asignatura</label>
+                        <select name="materia" id="modal_asignatura_part" class="form-select" required>
+                            <option value="">Seleccionar material primero...</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label fw-bold">Unidad</label>
+                        <select name="unidad" id="modal_unidad_part" class="form-select" required>
+                            <option value="">Seleccionar asignatura primero...</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer d-flex justify-content-between">
+                <button type="button" id="btnEliminarPart" class="btn btn-danger d-none" onclick="confirmarEliminarPart()">Eliminar</button>
+                <div>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                    <button type="submit" class="btn btn-primary fw-bold">Guardar</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    // --- LÓGICA DE APERTURA DEL MODAL ---
+    function abrirNuevoParticular() {
+        document.getElementById('modal_part_accion').name = "guardar_particular";
+        document.getElementById('modal_part_id').value = "";
+        document.getElementById('tituloModalPart').innerHTML = '<i class="fas fa-chalkboard-teacher"></i> Programar Clase Particular';
+        document.getElementById('btnEliminarPart').classList.add('d-none');
+        
+        document.getElementById('formParticular').reset();
+        document.getElementById('input_ciudad');
+        document.getElementById('modal_asignatura_part').innerHTML = '<option value="">Seleccionar material primero...</option>';
+        document.getElementById('modal_unidad_part').innerHTML = '<option value="">Seleccionar asignatura primero...</option>';
+        
+        new bootstrap.Modal(document.getElementById('modalParticular')).show();
+    }
+
+    async function abrirEditarParticular(id, estudiante, ciudad, mapa, fecha, hora, grado, material, materia, unidad) {
+        document.getElementById('modal_part_accion').name = "editar_particular";
+        document.getElementById('modal_part_id').value = id;
+        document.getElementById('tituloModalPart').innerHTML = '<i class="fas fa-edit"></i> Editar Clase Particular';
+        document.getElementById('btnEliminarPart').classList.remove('d-none');
+
+        // Llenar campos de texto
+        document.getElementById('input_estudiante').value = estudiante;
+        document.getElementById('input_ciudad').value = ciudad;
+        document.getElementById('input_mapa').value = mapa;
+        document.getElementById('input_fecha').value = fecha;
+        document.getElementById('input_hora').value = hora;
+        document.getElementById('input_grado').value = grado;
+        
+        // Cargar Libro
+        document.getElementById('modal_material_part').value = material;
+
+        // Cargar Asignaturas correspondientes
+        let asigSelect = document.getElementById('modal_asignatura_part');
+        asigSelect.innerHTML = '<option value="">Cargando...</option>';
+        let res1 = await fetch(`/profesores/ajax/asignaturas/?material=${encodeURIComponent(material)}`);
+        let data1 = await res1.json();
+        asigSelect.innerHTML = '<option value="">Seleccionar asignatura...</option>';
+        data1.forEach(m => {
+            let sel = (m === materia) ? 'selected' : '';
+            asigSelect.innerHTML += `<option value="${m}" ${sel}>${m}</option>`;
+        });
+
+        // Cargar Unidades correspondientes
+        let uniSelect = document.getElementById('modal_unidad_part');
+        uniSelect.innerHTML = '<option value="">Cargando...</option>';
+        let res2 = await fetch(`/profesores/ajax/unidades/?material=${encodeURIComponent(material)}&materia=${encodeURIComponent(materia)}`);
+        let data2 = await res2.json();
+        uniSelect.innerHTML = '<option value="">Seleccionar unidad...</option>';
+        data2.forEach(u => {
+            let sel = (u.unidad == unidad) ? 'selected' : '';
+            uniSelect.innerHTML += `<option value="${u.unidad}" ${sel}>Unidad ${u.unidad} - ${u.nombre_unidad}</option>`;
+        });
+
+        new bootstrap.Modal(document.getElementById('modalParticular')).show();
+    }
+
+    function confirmarEliminarPart() {
+        if(confirm('¿Estás seguro de que deseas eliminar permanentemente esta clase particular?')) {
+            document.getElementById('modal_part_accion').name = "eliminar_particular";
+            document.getElementById('formParticular').submit();
+        }
+    }
+
+    // --- LÓGICA AJAX EN CASCADA ---
+    document.getElementById('modal_material_part').addEventListener('change', async function() {
+        let material = this.value;
+        let asigSelect = document.getElementById('modal_asignatura_part');
+        let uniSelect = document.getElementById('modal_unidad_part');
+        
+        asigSelect.innerHTML = '<option value="">Cargando...</option>';
+        uniSelect.innerHTML = '<option value="">Seleccione Asignatura primero...</option>';
+        
+        if(!material) {
+            asigSelect.innerHTML = '<option value="">Seleccionar material primero...</option>';
+            return;
+        }
+        
+        let res = await fetch(`/profesores/ajax/asignaturas/?material=${encodeURIComponent(material)}`);
+        let data = await res.json();
+        asigSelect.innerHTML = '<option value="">Seleccionar asignatura...</option>';
+        data.forEach(m => {
+            asigSelect.innerHTML += `<option value="${m}">${m}</option>`;
+        });
+    });
+
+    document.getElementById('modal_asignatura_part').addEventListener('change', async function() {
+        let material = document.getElementById('modal_material_part').value;
+        let materia = this.value;
+        let uniSelect = document.getElementById('modal_unidad_part');
+        
+        uniSelect.innerHTML = '<option value="">Cargando...</option>';
+        
+        if(!materia) {
+            uniSelect.innerHTML = '<option value="">Seleccionar asignatura primero...</option>';
+            return;
+        }
+        
+        let res = await fetch(`/profesores/ajax/unidades/?material=${encodeURIComponent(material)}&materia=${encodeURIComponent(materia)}`);
+        let data = await res.json();
+        uniSelect.innerHTML = '<option value="">Seleccionar unidad...</option>';
+        data.forEach(u => {
+            uniSelect.innerHTML += `<option value="${u.unidad}">Unidad ${u.unidad} - ${u.nombre_unidad}</option>`;
+        });
+    });
+</script>
+{% endif %}
 {% endblock %}

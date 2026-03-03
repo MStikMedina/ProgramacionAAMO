@@ -49,3 +49,23 @@ class Clase(models.Model):
 
     class Meta:
         unique_together = ('fecha', 'bloque')
+
+class ClaseParticular(models.Model):
+    profesor = models.ForeignKey(Profesor, on_delete=models.CASCADE, verbose_name="Profesor")
+    estudiante = models.CharField(max_length=200, verbose_name="Nombre del Estudiante (Colegio)")
+    ciudad = models.CharField(max_length=100, default="Bucaramanga", verbose_name="Ciudad")
+    mapa_link = models.URLField(blank=True, null=True, verbose_name="Link de Maps")
+    
+    fecha = models.DateField(verbose_name="Fecha de la Clase")
+    hora = models.CharField(max_length=50, verbose_name="Hora (Ej: 14:00 - 16:00)")
+    grado = models.CharField(max_length=50, verbose_name="Grado")
+    
+    material = models.CharField(max_length=200, verbose_name="Libro / Material")
+    materia = models.CharField(max_length=100, verbose_name="Asignatura")
+    unidad = models.CharField(max_length=50, verbose_name="Unidad")
+
+    class Meta:
+        verbose_name_plural = "Clases Particulares"
+
+    def __str__(self):
+        return f"Particular: {self.estudiante} - {self.profesor.nombre} ({self.fecha})"
