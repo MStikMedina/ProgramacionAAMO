@@ -2,7 +2,4 @@ venv/
 __pycache__/
 *.sqlite3
 .env
-carga_masiva.py
-PlantillaCargaMasiva_AAMO.xlsx
-conversorAAMO.xlsm
-BD_Respaldo.xlsx
+importar/

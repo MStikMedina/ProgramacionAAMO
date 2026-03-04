@@ -323,9 +323,10 @@
 </div>
 {% endif %}
 
+{{ unidades_especiales|json_script:"unidades-especiales-data" }}
 <script>
     // Etiquetas de unidades especiales (fuente única de verdad, definida en colegios/views.py)
-    const UNIDADES_ESPECIALES = JSON.parse('{% autoescape off %}{{ unidades_especiales|safe }}{% endautoescape %}');
+    const UNIDADES_ESPECIALES = JSON.parse(document.getElementById('unidades-especiales-data').textContent);
 
     $(document).ready(function() {
         $('.select2-busqueda').select2({ theme: "bootstrap-5", width: '100%' });
