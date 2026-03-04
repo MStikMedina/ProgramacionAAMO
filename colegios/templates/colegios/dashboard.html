@@ -63,10 +63,6 @@
                                onchange="window.location.href='?id_col={{ sel_col.id }}&vista={{ tipo_vista }}&fecha=' + this.value">
                     </div>
                     <a href="?id_col={{ sel_col.id }}&vista={{ tipo_vista }}&fecha={{ fecha_sig }}" class="btn btn-dark btn-sm">Siguiente ▶</a>
-                    {% if request.user.is_staff %}
-                    <a href="/admin" class="btn btn-outline-danger btn-sm" title="Ir al Panel de Administración"><i class="fas fa-user-shield"></i></a>
-                    {% endif %}
-                </div>
             </div>
         </div>
     </div>

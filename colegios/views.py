@@ -9,8 +9,6 @@ from django.views.decorators.clickjacking import xframe_options_sameorigin
 
 # ─────────────────────────────────────────────────────────────
 # CONSTANTES DE NEGOCIO (fuente única de verdad)
-# En lugar de tener "A", "S" hardcodeados en templates y views,
-# los definimos aquí una sola vez.
 # ─────────────────────────────────────────────────────────────
 UNIDADES_ESPECIALES = {
     'A': 'Material Asignado',
@@ -25,6 +23,7 @@ def label_unidad(unidad):
 # ─────────────────────────────────────────────────────────────
 # UTILIDADES
 # ─────────────────────────────────────────────────────────────
+
 def extraer_minutos(hora_str):
     """Convierte '8:00 - 10:00' en minutos (480) para poder ordenar por hora."""
     match = re.search(r'(\d+):(\d+)', str(hora_str))
@@ -43,6 +42,7 @@ def extraer_numero_grado(grado_str):
 # ─────────────────────────────────────────────────────────────
 # VISTAS AJAX
 # ─────────────────────────────────────────────────────────────
+
 def cargar_grados(request):
     colegio_id = request.GET.get('colegio_id')
     if colegio_id:
@@ -66,7 +66,7 @@ def obtener_materias(request):
     except ValueError:
         return JsonResponse([])
 
-    # Una sola consulta: asignaciones + libros en el mismo queryset
+    # Filtra las asignaciones vigentes para esa fecha exacta
     asignaciones = Asignacion.objects.filter(
         colegio_id=colegio_id,
         grado=grado,
@@ -97,7 +97,7 @@ def obtener_unidades(request):
     except ValueError:
         return JsonResponse({'unidades': [], 'recomendada': ''})
 
-    # Una sola consulta para obtener títulos de libros asignados
+    # Filtra las asignaciones vigentes para esa fecha exacta
     titulos_asignados = Asignacion.objects.filter(
         colegio_id=colegio_id,
         grado=grado,
@@ -113,7 +113,6 @@ def obtener_unidades(request):
     numeros = sorted(
         [str(u) for u in set(unidades_libro) if str(u).isdigit()], key=int
     )
-    # Las unidades especiales siempre se agregan al final
     unidades_finales = numeros + list(UNIDADES_ESPECIALES.keys())
 
     # Calcular unidad recomendada
@@ -140,11 +139,11 @@ def obtener_unidades(request):
 
 # ─────────────────────────────────────────────────────────────
 # HELPERS PRIVADOS DE dashboard_colegios
-# (vista dividida en funciones pequeñas y claras)
 # ─────────────────────────────────────────────────────────────
+
 def _guardar_clase(request, sel_col):
     """Procesa el POST de guardar o eliminar una clase."""
-    bloque_id  = request.POST.get('bloque_id')
+    bloque_id   = request.POST.get('bloque_id')
     fecha_clase = request.POST.get('fecha_clase')
 
     if request.POST.get('eliminar_clase') == '1':
@@ -159,13 +158,13 @@ def _guardar_clase(request, sel_col):
         bloque_id=bloque_id,
         fecha=fecha_clase,
         defaults={
-            'profesor_id': profesor_id,
-            'materia':      request.POST.get('materia'),
-            'unidad':       request.POST.get('unidad'),
-            'es_evento':    request.POST.get('es_evento') == 'on',
+            'profesor_id':   profesor_id,
+            'materia':       request.POST.get('materia'),
+            'unidad':        request.POST.get('unidad'),
+            'es_evento':     request.POST.get('es_evento') == 'on',
             'titulo_evento': request.POST.get('titulo_evento'),
-            'cancelada':    request.POST.get('cancelada') == 'on',
-            'comentarios':  request.POST.get('comentarios'),
+            'cancelada':     request.POST.get('cancelada') == 'on',
+            'comentarios':   request.POST.get('comentarios'),
         }
     )
 
@@ -217,10 +216,9 @@ def _construir_matriz(sel_col, bloques_raw, inicio, fin):
 def _ejecutar_auditoria(nombre_sel):
     """
     Revisa todas las clases del año en busca de:
-    - Unidades duplicadas por grado/materia
+    - Unidades duplicadas por grado/materia/libro
     - Profesores con conflicto de horario (mismo día, dos colegios)
-    - Saltos en la secuencia de unidades
-    Devuelve un dict con las tres listas de errores ordenadas.
+    - Saltos en la secuencia de unidades (respetando cambio de libro)
     """
     año_actual = date.today().year
     todas_clases = (
@@ -229,6 +227,28 @@ def _ejecutar_auditoria(nombre_sel):
         .select_related('colegio', 'bloque', 'profesor')
         .order_by('fecha', 'bloque__orden', 'id')
     )
+
+    # ── CORRECCIÓN: pre-cargar asignaciones agrupadas por (colegio_id, grado)
+    # para poder hacer el lookup por fecha de forma eficiente.
+    asignaciones_por_clave = defaultdict(list)
+    for a in Asignacion.objects.select_related('colegio'):
+        asignaciones_por_clave[(a.colegio_id, a.grado)].append(a)
+
+    def _get_libro(colegio_id, grado, fecha):
+        """
+        Devuelve el libro asignado para esa fecha exacta.
+        Retorna '' si no hay ninguna asignación que cubra la fecha.
+        """
+        for a in asignaciones_por_clave.get((colegio_id, grado), []):
+            # El modelo garantiza que ambas fechas tienen valor (via save()),
+            # pero chequeamos por robustez ante datos migrados.
+            inicio = a.fecha_inicio
+            fin    = a.fecha_fin
+            if inicio and fin and inicio <= fecha <= fin:
+                return a.libro_titulo
+            if inicio is None and fin is None:
+                return a.libro_titulo
+        return ''
 
     mapa_unidades   = defaultdict(list)
     mapa_profesores = defaultdict(set)
@@ -239,24 +259,26 @@ def _ejecutar_auditoria(nombre_sel):
             continue
         grado      = c.bloque.grado
         col_nombre = c.colegio.nombre
+        libro      = _get_libro(c.colegio_id, grado, c.fecha)
 
         if str(c.unidad).isdigit():
-            mapa_unidades[(col_nombre, grado, c.materia, c.unidad)].append(c)
+            mapa_unidades[(col_nombre, grado, c.materia, libro, c.unidad)].append(c)
 
         if c.profesor_id:
             mapa_profesores[(c.profesor.nombre_corto, c.fecha)].add(col_nombre)
 
-        mapa_secuencia[(col_nombre, grado, c.materia)].append(c)
+        mapa_secuencia[(col_nombre, grado, c.materia, libro)].append(c)
 
     # — Duplicados —
     errores_duplicados = []
-    for (col, gr, mat, uni), clases_list in mapa_unidades.items():
+    for (col, gr, mat, libro, uni), clases_list in mapa_unidades.items():
         if len(clases_list) > 1:
             fechas = [cl.fecha.strftime('%d-%b') for cl in clases_list]
+            libro_txt = f' ({libro})' if libro else ''
             errores_duplicados.append({
                 'colegio': col,
                 'mensaje': (
-                    f"El grado {gr} tiene programada la unidad {uni} de {mat} "
+                    f"El grado {gr} tiene programada la unidad {uni} de {mat}{libro_txt} "
                     f"{len(clases_list)} veces (Fechas: {', '.join(fechas)})."
                 ),
             })
@@ -277,7 +299,7 @@ def _ejecutar_auditoria(nombre_sel):
 
     # — Saltos de secuencia —
     errores_secuencias = []
-    for (col, gr, mat), clases_list in mapa_secuencia.items():
+    for (col, gr, mat, libro), clases_list in mapa_secuencia.items():
         ultima_unidad = None
         for cl in clases_list:
             if str(cl.unidad).isdigit():
@@ -285,10 +307,11 @@ def _ejecutar_auditoria(nombre_sel):
                 if ultima_unidad is not None and (
                     unidad_actual > ultima_unidad + 1 or unidad_actual < ultima_unidad
                 ):
+                    libro_txt = f' ({libro})' if libro else ''
                     errores_secuencias.append({
                         'colegio': col,
                         'mensaje': (
-                            f"Salto de secuencia en el grado {gr} para {mat}. "
+                            f"Salto de secuencia en el grado {gr} para {mat}{libro_txt}. "
                             f"Pasó de la unidad {ultima_unidad} a la {unidad_actual} "
                             f"el {cl.fecha.strftime('%d-%b')}."
                         ),
@@ -296,7 +319,6 @@ def _ejecutar_auditoria(nombre_sel):
                 ultima_unidad = unidad_actual
 
     def _priorizar(err_list):
-        """Pone primero los errores del colegio que se está viendo."""
         return sorted(
             err_list,
             key=lambda x: 0 if (
@@ -306,15 +328,16 @@ def _ejecutar_auditoria(nombre_sel):
         )
 
     return {
-        'errores_duplicados':  _priorizar(errores_duplicados),
-        'errores_profesores':  _priorizar(errores_profesores),
-        'errores_secuencias':  _priorizar(errores_secuencias),
+        'errores_duplicados': _priorizar(errores_duplicados),
+        'errores_profesores': _priorizar(errores_profesores),
+        'errores_secuencias': _priorizar(errores_secuencias),
     }
 
 
 # ─────────────────────────────────────────────────────────────
 # VISTA PRINCIPAL
 # ─────────────────────────────────────────────────────────────
+
 def dashboard_colegios(request):
     colegios   = Colegio.objects.all().order_by('nombre')
     id_col     = request.GET.get('id_col')
@@ -327,15 +350,13 @@ def dashboard_colegios(request):
         fecha_ref = date.today()
 
     ctx = {
-        'colegios':    colegios,
-        'sel_col':     None,
-        'tipo_vista':  tipo_vista,
-        'fecha_ref':   fecha_ref,
-        'fecha_input': fecha_ref.strftime('%Y-%m-%d'),
-        'profesores':  Profesor.objects.all().order_by('nombre'),
-        'recursos_json': '{}',
-        # Pasamos las etiquetas de unidades especiales para que el template
-        # no tenga lógica hardcodeada
+        'colegios':          colegios,
+        'sel_col':           None,
+        'tipo_vista':        tipo_vista,
+        'fecha_ref':         fecha_ref,
+        'fecha_input':       fecha_ref.strftime('%Y-%m-%d'),
+        'profesores':        Profesor.objects.all().order_by('nombre'),
+        'recursos_json':     '{}',
         'unidades_especiales': UNIDADES_ESPECIALES,
     }
 
@@ -371,6 +392,7 @@ def dashboard_colegios(request):
 # ─────────────────────────────────────────────────────────────
 # CONFIGURACIÓN DE COLEGIO
 # ─────────────────────────────────────────────────────────────
+
 @xframe_options_sameorigin
 def configurar_colegio(request, colegio_id):
     colegio = get_object_or_404(Colegio, id=colegio_id)
@@ -413,13 +435,13 @@ def configurar_colegio(request, colegio_id):
 
         return redirect('configurar_colegio', colegio_id=colegio.id)
 
-    bloques      = Bloque.objects.filter(colegio=colegio).order_by('grado', 'orden')
-    asignaciones = Asignacion.objects.filter(colegio=colegio).order_by('grado')
+    bloques       = Bloque.objects.filter(colegio=colegio).order_by('grado', 'orden')
+    asignaciones  = Asignacion.objects.filter(colegio=colegio).order_by('grado')
     libros_unicos = Libro.objects.values_list('titulo', flat=True).distinct()
 
     return render(request, 'colegios/configurar_colegio.html', {
-        'colegio':     colegio,
-        'bloques':     bloques,
+        'colegio':      colegio,
+        'bloques':      bloques,
         'asignaciones': asignaciones,
-        'libros':      libros_unicos,
+        'libros':       libros_unicos,
     })

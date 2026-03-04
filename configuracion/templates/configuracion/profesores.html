@@ -167,6 +167,9 @@
                         onclick="editarProfesor(this.dataset)">
                   <i class="fas fa-edit"></i>
                 </button>
+                <a href="/colegios/descargar-profesor/{{ p.id }}/" class="btn btn-sm btn-outline-success py-0 me-1" title="Descargar Excel">
+                  <i class="fas fa-file-excel"></i>
+                </a>
                 <form method="POST" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar este profesor?');">
                   {% csrf_token %}
                   <input type="hidden" name="accion" value="del">
@@ -175,8 +178,6 @@
                 </form>
               </td>
             </tr>
-            {% empty %}
-            <tr><td colspan="4" class="text-center text-muted py-3"><i class="fas fa-user-slash me-1"></i> No hay profesores registrados.</td></tr>
             {% endfor %}
           </tbody>
         </table>

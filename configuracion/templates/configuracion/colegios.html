@@ -46,6 +46,9 @@
                                         onclick="abrirConfiguracion(this.dataset.id, this.dataset.nombre)">
                                     <i class="fas fa-cogs"></i>
                                 </button>
+                                <a href="/colegios/descargar-colegio/{{ c.id }}/" class="btn btn-sm btn-outline-success ms-1" title="Descargar Excel">
+                                    <i class="fas fa-file-excel"></i>
+                                </a>
                                 <button class="btn btn-sm btn-outline-warning ms-1"
                                         data-id="{{ c.id }}"
                                         data-nombre="{{ c.nombre }}"
