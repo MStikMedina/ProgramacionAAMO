@@ -62,7 +62,7 @@
                 {% for item in grupo.clases %}
                 <div class="columna-clase">
                     <div class="celda position-relative">
-                        <a href="{{ item.maps_link }}" target="_blank" class="link-azul text-truncate" style="max-width: 85%;">{{ item.clase.colegio.nombre }}</a>
+                        <a href="{{ item.maps_link }}" target="_blank" class="link-azul text-truncate" style="max-width: 85%;">{% if item.es_particular %}{{ item.particular_obj.estudiante }} (Part.){% else %}{{ item.clase.colegio.nombre }}{% endif %}</a>
                         
                         {% if request.user.is_staff and item.es_particular %}
                         <button class="btn btn-sm text-warning p-0 border-0 position-absolute" style="right: 8px;" title="Editar Clase Particular"
@@ -71,16 +71,16 @@
                         </button>
                         {% endif %}
                     </div>
-                    <div class="celda">{{ item.clase.colegio.ciudad }}</div>
-                    <div class="celda fw-bold text-dark">{{ item.clase.bloque.hora }}</div>
-                    <div class="celda">{{ item.clase.bloque.grado }}</div>
+                    <div class="celda">{% if item.es_particular %}{{ item.particular_obj.ciudad }}{% else %}{{ item.clase.colegio.ciudad }}{% endif %}</div>
+                    <div class="celda fw-bold text-dark">{% if item.es_particular %}{{ item.particular_obj.hora }}{% else %}{{ item.clase.bloque.hora }}{% endif %}</div>
+                    <div class="celda">{% if item.es_particular %}{{ item.particular_obj.grado }}{% else %}{{ item.clase.bloque.grado }}{% endif %}</div>
                     <div class="columna-clase">
                         <div class="celda">
                             <span class="celda-contenido" title="{{ item.material }}">{{ item.material }}</span>
                         </div>
         
                         <div class="celda">
-                            <span class="celda-contenido" title="{{ item.clase.materia }}">{{ item.clase.materia }}</span>
+                            <span class="celda-contenido" title="{% if item.es_particular %}{{ item.particular_obj.materia }}{% else %}{{ item.clase.materia }}{% endif %}">{% if item.es_particular %}{{ item.particular_obj.materia }}{% else %}{{ item.clase.materia }}{% endif %}</span>
                         </div>
         
                         <div class="celda">
