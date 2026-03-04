@@ -114,13 +114,13 @@
                                                 {% if clase.cancelada %}
                                                     <span class="badge bg-danger mb-1" style="font-size: 0.6rem;">Cancelada</span>
                                                     <div class="fw-bold text-dark text-decoration-line-through" style="line-height: 1.1;">{{ clase.materia }}</div>
-                                                    <div class="text-muted small text-decoration-line-through">{{ clase.profesor.nombre }}</div>
+                                                    <div class="text-muted small text-decoration-line-through">{{ clase.profesor.nombre_corto }}</div>
                                                 {% elif clase.es_evento %}
                                                     <span class="badge bg-warning text-dark mb-1" style="font-size: 0.6rem;"><i class="fas fa-star"></i> Evento</span>
                                                     <div class="fw-bold text-dark" style="line-height: 1.1;">{{ clase.titulo_evento }}</div>
                                                 {% else %}
                                                     <div class="fw-bold text-dark" style="line-height: 1.1;">{{ clase.materia }}</div>
-                                                    <div class="text-muted small">{{ clase.profesor.nombre }}</div>
+                                                    <div class="text-muted small">{{ clase.profesor.nombre_corto }}</div>
                                                     {% if clase.unidad %}
                                                         <div class="badge bg-dark mt-1" style="font-size: 0.6rem;">
                                                             {% if clase.unidad == 'S' %}Socialización

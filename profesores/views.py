@@ -11,7 +11,6 @@ def extraer_minutos(hora_str):
     except:
         return 0
 
-# --- FUNCIONES AJAX PARA EL FORMULARIO ---
 def obtener_asignaturas_particular(request):
     material = request.GET.get('material')
     if material:
@@ -27,12 +26,25 @@ def obtener_unidades_particular(request):
         return JsonResponse(list(unidades), safe=False)
     return JsonResponse([])
 
-# --- VISTA PRINCIPAL ---
+def _resolver_unidad(unidad, unidad_obj):
+    """
+    Devuelve (material_label, unidad_label, unidad_link) según el valor de la unidad.
+    - A → material: 'Material Asignado'  | unidad: 'Banco de Preguntas'
+    - S → material: 'Socialización de Simulacro' | unidad: 'Socialización de Simulacro'
+    - N → material: título del libro | unidad: 'N. Nombre unidad'
+    """
+    if str(unidad) == 'A':
+        return 'Material Asignado', 'Banco de Preguntas', '#'
+    elif str(unidad) == 'S':
+        return 'Socialización de Simulacro', 'Socialización de Simulacro', '#'
+    else:
+        unidad_full = f"{unidad}. {unidad_obj.nombre_unidad}" if unidad_obj else str(unidad)
+        unidad_link = unidad_obj.link_unidad if unidad_obj else '#'
+        return None, unidad_full, unidad_link
+
 def ver_horario(request):
-    # Procesar guardado, edición o eliminación de Clase Particular (Solo Admins)
     if request.method == 'POST' and request.user.is_staff:
         profesor_id = request.POST.get('profesor_id')
-        
         if 'guardar_particular' in request.POST:
             ClaseParticular.objects.create(
                 profesor_id=profesor_id,
@@ -60,49 +72,59 @@ def ver_horario(request):
                 unidad=request.POST.get('unidad')
             )
         elif 'eliminar_particular' in request.POST:
-            p_id = request.POST.get('particular_id')
-            ClaseParticular.objects.filter(id=p_id).delete()
-            
+            ClaseParticular.objects.filter(id=request.POST.get('particular_id')).delete()
         return redirect(f"{request.path}?profesor_id={profesor_id}")
 
     profesor_id = request.GET.get('profesor_id')
     profesores = Profesor.objects.all().order_by('nombre')
     agrupado_por_fecha = []
-    
-    # Extraer todos los títulos de libros únicos para el primer selector
     todos_libros = Libro.objects.values_list('titulo', flat=True).distinct()
 
     if profesor_id:
         temp_dict = defaultdict(list)
-        
-        # 1. Cargar Clases Normales
+
+        # 1. Clases normales de colegios
         clases = Clase.objects.filter(
-            profesor_id=profesor_id, 
-            cancelada=False, 
+            profesor_id=profesor_id,
+            cancelada=False,
             es_evento=False
         ).select_related('colegio', 'bloque').order_by('fecha')
 
         for c in clases:
-            asig = Asignacion.objects.filter(colegio=c.colegio, grado=c.bloque.grado).first()
+            asig = Asignacion.objects.filter(
+                colegio=c.colegio, grado=c.bloque.grado
+            ).first()
             libro_titulo = asig.libro_titulo if asig else "Sin Libro"
-            unidad_obj = Libro.objects.filter(titulo=libro_titulo, materia=c.materia, unidad=c.unidad).first()
+
+            unidad_obj = Libro.objects.filter(
+                titulo=libro_titulo, materia=c.materia, unidad=c.unidad
+            ).first()
+
+            material_override, unidad_full, unidad_link = _resolver_unidad(c.unidad, unidad_obj)
 
             temp_dict[c.fecha].append({
                 'clase': c,
                 'minutos': extraer_minutos(c.bloque.hora),
-                'material': libro_titulo,
-                'unidad_full': f"{c.unidad}. {unidad_obj.nombre_unidad}" if unidad_obj else c.unidad,
-                'unidad_link': unidad_obj.link_unidad if unidad_obj else "#",
+                # Si hay override de material (A o S), lo usamos; si no, el título del libro
+                'material': material_override if material_override else libro_titulo,
+                'unidad_full': unidad_full,
+                'unidad_link': unidad_link,
                 'maps_link': getattr(c.colegio, 'mapa_link', '#') or '#',
-                'es_particular': False # Bandera para el HTML
+                'es_particular': False,
             })
 
-        # 2. Cargar Clases Particulares
-        particulares = ClaseParticular.objects.filter(profesor_id=profesor_id).order_by('fecha')
-        
+        # 2. Clases particulares
+        particulares = ClaseParticular.objects.filter(
+            profesor_id=profesor_id
+        ).order_by('fecha')
+
         for p in particulares:
-            unidad_obj = Libro.objects.filter(titulo=p.material, materia=p.materia, unidad=p.unidad).first()
-            
+            unidad_obj = Libro.objects.filter(
+                titulo=p.material, materia=p.materia, unidad=p.unidad
+            ).first()
+
+            material_override, unidad_full, unidad_link = _resolver_unidad(p.unidad, unidad_obj)
+
             falsa_clase = {
                 'colegio': {'nombre': f"{p.estudiante} (Part.)", 'ciudad': p.ciudad},
                 'bloque': {'hora': p.hora, 'grado': p.grado},
@@ -112,20 +134,20 @@ def ver_horario(request):
             temp_dict[p.fecha].append({
                 'clase': falsa_clase,
                 'minutos': extraer_minutos(p.hora),
-                'material': p.material,
-                'unidad_full': f"{p.unidad}. {unidad_obj.nombre_unidad}" if unidad_obj else p.unidad,
-                'unidad_link': unidad_obj.link_unidad if unidad_obj else "#",
+                'material': material_override if material_override else p.material,
+                'unidad_full': unidad_full,
+                'unidad_link': unidad_link,
                 'maps_link': p.mapa_link or '#',
-                'es_particular': True, # Bandera para el HTML
+                'es_particular': True,
                 'particular_id': p.id,
-                'raw_data': { # Datos puros para inyectar en el Modal de Edición
-                    'estudiante': p.estudiante, 'ciudad': p.ciudad, 
-                    'fecha': p.fecha.strftime('%Y-%m-%d'), 'hora': p.hora, 
+                'raw_data': {
+                    'estudiante': p.estudiante, 'ciudad': p.ciudad,
+                    'fecha': p.fecha.strftime('%Y-%m-%d'), 'hora': p.hora,
                     'grado': p.grado, 'materia': p.materia, 'unidad': p.unidad
                 }
             })
 
-        # 3. Ordenar todo por fecha y luego por hora
+        # 3. Ordenar por fecha y hora
         for fecha in sorted(temp_dict.keys()):
             clases_ordenadas = sorted(temp_dict[fecha], key=lambda x: x['minutos'])
             agrupado_por_fecha.append({

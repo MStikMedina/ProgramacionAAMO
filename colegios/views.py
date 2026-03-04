@@ -26,25 +26,17 @@ def obtener_materias(request):
     colegio_id = request.GET.get('colegio_id')
     grado = request.GET.get('grado')
     fecha_str = request.GET.get('fecha')
-    
     if not all([colegio_id, grado, fecha_str]):
         return JsonResponse([])
-        
     fecha_clase = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-
-    # Buscar libros asignados activos en esa fecha específica
     asignaciones = Asignacion.objects.filter(
-        colegio_id=colegio_id,
-        grado=grado,
-        fecha_inicio__lte=fecha_clase,
-        fecha_fin__gte=fecha_clase
+        colegio_id=colegio_id, grado=grado,
+        fecha_inicio__lte=fecha_clase, fecha_fin__gte=fecha_clase
     )
-    
     materias = []
     for asig in asignaciones:
         mats = Libro.objects.filter(titulo=asig.libro_titulo).values_list('materia', flat=True).distinct()
         materias.extend(list(mats))
-        
     return JsonResponse(list(set(materias)), safe=False)
 
 def obtener_unidades(request):
@@ -52,105 +44,67 @@ def obtener_unidades(request):
     grado = request.GET.get('grado')
     fecha_str = request.GET.get('fecha')
     materia = request.GET.get('materia')
-    bloque_id = request.GET.get('bloque_id') # Nuevo parámetro
-
+    bloque_id = request.GET.get('bloque_id')
     if not all([colegio_id, grado, fecha_str, materia]):
         return JsonResponse({'unidades': [], 'recomendada': ''})
-
     fecha_clase = datetime.strptime(fecha_str, '%Y-%m-%d').date()
-
     asignaciones = Asignacion.objects.filter(
-        colegio_id=colegio_id, grado=grado, fecha_inicio__lte=fecha_clase, fecha_fin__gte=fecha_clase
+        colegio_id=colegio_id, grado=grado,
+        fecha_inicio__lte=fecha_clase, fecha_fin__gte=fecha_clase
     )
-    
     unidades_libro = []
     for asig in asignaciones:
         unis = Libro.objects.filter(titulo=asig.libro_titulo, materia=materia).values_list('unidad', flat=True)
         unidades_libro.extend(list(unis))
-
-    # Extraer solo números para la recomendación
     numeros = sorted([str(u) for u in set(unidades_libro) if str(u).isdigit()], key=int)
-    # Las unidades finales que se muestran en la lista sí incluyen A y S
     unidades_finales = numeros + ['A', 'S']
-
     unidad_recomendada = ""
-
-    # Buscar el historial de la materia, sin importar el profesor
     query_clases = Clase.objects.filter(
-        colegio_id=colegio_id,
-        bloque__grado=grado,
-        materia=materia,
-        fecha__lte=fecha_clase # Incluimos la fecha actual para que lea clases del mismo día
+        colegio_id=colegio_id, bloque__grado=grado,
+        materia=materia, fecha__lte=fecha_clase
     )
-
     if bloque_id:
-        # Excluimos la celda actual que estamos editando para no romper la secuencia
         query_clases = query_clases.exclude(bloque_id=bloque_id, fecha=fecha_clase)
-
-    # Obtenemos la última clase registrada
     ultima_clase = query_clases.order_by('-fecha', '-bloque__orden', '-id').first()
-
     if ultima_clase and ultima_clase.unidad and str(ultima_clase.unidad).isdigit():
         siguiente = str(int(ultima_clase.unidad) + 1)
-        # Al validar que "siguiente" esté en "numeros", nos aseguramos de NUNCA recomendar A o S
-        if siguiente in numeros: 
+        if siguiente in numeros:
             unidad_recomendada = siguiente
     elif numeros:
         unidad_recomendada = numeros[0]
+    return JsonResponse({'unidades': unidades_finales, 'recomendada': unidad_recomendada})
 
-    return JsonResponse({
-        'unidades': unidades_finales,
-        'recomendada': unidad_recomendada
-    })
-    
 def dashboard_colegios(request):
     colegios = Colegio.objects.all().order_by('nombre')
-    
     id_col = request.GET.get('id_col')
     tipo_vista = request.GET.get('vista', 'Semana')
     fecha_get = request.GET.get('fecha')
     fecha_ref = datetime.strptime(fecha_get, '%Y-%m-%d').date() if fecha_get else date.today()
-
     ctx = {
-        'colegios': colegios,
-        'sel_col': None,
-        'tipo_vista': tipo_vista,
-        'fecha_ref': fecha_ref,
-        'fecha_input': fecha_ref.strftime('%Y-%m-%d'),
-        'profesores': Profesor.objects.all().order_by('nombre'),
-        'recursos_json': '{}', # Por defecto vacío
+        'colegios': colegios, 'sel_col': None, 'tipo_vista': tipo_vista,
+        'fecha_ref': fecha_ref, 'fecha_input': fecha_ref.strftime('%Y-%m-%d'),
+        'profesores': Profesor.objects.all().order_by('nombre'), 'recursos_json': '{}',
     }
-
     if id_col:
         sel_col = get_object_or_404(Colegio, id=id_col)
         ctx['sel_col'] = sel_col
-
-        # --- PROCESAR GUARDADO O ELIMINACIÓN DE CLASE ---
         if request.method == "POST" and 'guardar_clase' in request.POST:
-            # Candado de seguridad: Solo administradores pueden guardar o borrar clases
             if request.user.is_staff:
                 bloque_id = request.POST.get('bloque_id')
                 fecha_clase = request.POST.get('fecha_clase')
                 eliminar = request.POST.get('eliminar_clase')
-
                 if eliminar == "1":
                     Clase.objects.filter(colegio=sel_col, bloque_id=bloque_id, fecha=fecha_clase).delete()
                 else:
                     profesor_id = request.POST.get('profesor')
-                    
-                    # Atrapamos los nuevos campos del formulario
                     es_evento = request.POST.get('es_evento') == 'on'
                     cancelada = request.POST.get('cancelada') == 'on'
-                    
                     Clase.objects.update_or_create(
-                        colegio=sel_col,
-                        bloque_id=bloque_id,
-                        fecha=fecha_clase,
+                        colegio=sel_col, bloque_id=bloque_id, fecha=fecha_clase,
                         defaults={
                             'profesor_id': profesor_id if profesor_id else None,
                             'materia': request.POST.get('materia'),
                             'unidad': request.POST.get('unidad'),
-                            # Guardamos los nuevos datos en la base de datos
                             'es_evento': es_evento,
                             'titulo_evento': request.POST.get('titulo_evento'),
                             'cancelada': cancelada,
@@ -158,8 +112,6 @@ def dashboard_colegios(request):
                         }
                     )
             return redirect(request.get_full_path())
-        
-        # --- LÓGICA DE RANGOS DE FECHA ---
         if tipo_vista == 'Semana':
             inicio = fecha_ref - timedelta(days=fecha_ref.weekday())
             dias_totales = 7
@@ -170,70 +122,50 @@ def dashboard_colegios(request):
         else:
             inicio = date(fecha_ref.year, 1, 1)
             dias_totales = 366 if (fecha_ref.year % 4 == 0) else 365
-            
         dias_header = [inicio + timedelta(days=i) for i in range(dias_totales)]
         ctx.update({
             'dias_header': dias_header,
             'fecha_ant': (inicio - timedelta(days=1)).strftime('%Y-%m-%d'),
             'fecha_sig': (inicio + timedelta(days=dias_totales)).strftime('%Y-%m-%d'),
         })
-
-        # --- ORDENAMIENTO DE BLOQUES ---
         bloques_raw = Bloque.objects.filter(colegio=sel_col)
         bloques_temp = defaultdict(list)
         for b in bloques_raw:
             bloques_temp[b.grado].append(b)
-        
         def extraer_numero_grado(grado_str):
             nums = re.findall(r'\d+', grado_str)
             return int(nums[0]) if nums else 0
-
         grados_ordenados = sorted(bloques_temp.keys(), key=extraer_numero_grado, reverse=True)
         bloques_final = {}
         for grado in grados_ordenados:
             bloques_final[grado] = sorted(bloques_temp[grado], key=lambda x: extraer_minutos(x.hora))
-        
         ctx['bloques_agrupados'] = bloques_final
-
-        # --- MATRIZ DE CLASES ---
         clases = Clase.objects.filter(colegio=sel_col, fecha__range=[inicio, dias_header[-1]])
         matriz = {b.id: {} for b in bloques_raw}
         for c in clases:
             if c.bloque_id in matriz:
                 matriz[c.bloque_id][str(c.fecha)] = c
         ctx['matriz'] = matriz
-        
-    # =========================================================
-    # MOTOR DE AUDITORÍA Y ERRORES (Solo para Administradores)
-    # =========================================================
+
     if request.user.is_staff:
         año_actual = date.today().year
-        
         todas_clases = Clase.objects.filter(
-            fecha__year=año_actual,
-            es_evento=False,
-            cancelada=False
+            fecha__year=año_actual, es_evento=False, cancelada=False
         ).select_related('colegio', 'bloque', 'profesor').order_by('fecha', 'bloque__orden', 'id')
-
         mapa_unidades = defaultdict(list)
         mapa_profesores = defaultdict(set)
         mapa_secuencia = defaultdict(list)
-
         for c in todas_clases:
             if not c.materia or not c.unidad:
                 continue
-                
             grado = c.bloque.grado
             col_nombre = c.colegio.nombre
-
             if str(c.unidad).isdigit():
                 mapa_unidades[(col_nombre, grado, c.materia, c.unidad)].append(c)
-
             if c.profesor_id:
-                mapa_profesores[(c.profesor.nombre, c.fecha)].add(col_nombre)
-
+                # FIX: usar nombre_corto para consistencia con el resto de la app
+                mapa_profesores[(c.profesor.nombre_corto, c.fecha)].add(col_nombre)
             mapa_secuencia[(col_nombre, grado, c.materia)].append(c)
-
         errores_duplicados = []
         for key, clases_list in mapa_unidades.items():
             if len(clases_list) > 1:
@@ -243,7 +175,6 @@ def dashboard_colegios(request):
                     'colegio': col,
                     'mensaje': f"El grado {gr} tiene programada la unidad {uni} de {mat} {len(clases_list)} veces (Fechas: {', '.join(fechas)})."
                 })
-
         errores_profesores = []
         for key, colegios_set in mapa_profesores.items():
             if len(colegios_set) > 1:
@@ -251,9 +182,8 @@ def dashboard_colegios(request):
                 errores_profesores.append({
                     'colegio': list(colegios_set),
                     'colegios_implicados': list(colegios_set),
-                    'mensaje': f"El profesor {profe_nombre} tiene clases en {len(colegios_set)} colegios distintos el {fecha.strftime('%d-%b')} ({' y '.join(colegios_set)})."
+                    'mensaje': f"El profesor {profe_nombre} tiene clases en {len(colegios_set)} colegios distintos el {fecha.strftime('%d-%b')} ({chr(32).join(colegios_set)})."
                 })
-
         errores_secuencias = []
         for key, clases_list in mapa_secuencia.items():
             col, gr, mat = key
@@ -268,47 +198,35 @@ def dashboard_colegios(request):
                                 'mensaje': f"Salto de secuencia en el grado {gr} para {mat}. Pasó de la unidad {ultima_unidad} a la {unidad_actual} el {cl.fecha.strftime('%d-%b')}."
                             })
                     ultima_unidad = unidad_actual
-
         nombre_sel = ctx['sel_col'].nombre if ctx.get('sel_col') else ""
-
         def sort_errors(err_list):
             return sorted(err_list, key=lambda x: 0 if x['colegio'] == nombre_sel or (x.get('colegios_implicados') and nombre_sel in x['colegios_implicados']) else 1)
-
         ctx['errores_duplicados'] = sort_errors(errores_duplicados)
         ctx['errores_profesores'] = sort_errors(errores_profesores)
         ctx['errores_secuencias'] = sort_errors(errores_secuencias)
-
     return render(request, 'colegios/dashboard.html', ctx)
 
 @xframe_options_sameorigin
 def configurar_colegio(request, colegio_id):
     colegio = get_object_or_404(Colegio, id=colegio_id)
-    
     if request.method == 'POST':
         accion = request.POST.get('accion')
-        
-        # --- Lógica para Bloques ---
         if accion == 'add_bloque':
             Bloque.objects.create(
-                colegio=colegio,
-                grado=request.POST.get('grado'),
-                hora=request.POST.get('hora'),
-                orden=request.POST.get('orden', 0)
+                colegio=colegio, grado=request.POST.get('grado'),
+                hora=request.POST.get('hora'), orden=request.POST.get('orden', 0)
             )
         elif accion == 'edit_bloque':
             b = get_object_or_404(Bloque, id=request.POST.get('bloque_id'), colegio=colegio)
             b.grado = request.POST.get('grado')
             b.hora = request.POST.get('hora')
             b.orden = request.POST.get('orden', 0)
-            b.save()  # Guarda los cambios sin crear uno nuevo, protegiendo las clases
+            b.save()
         elif accion == 'del_bloque':
             Bloque.objects.filter(id=request.POST.get('bloque_id')).delete()
-            
-        # --- Lógica para Asignaciones ---
         elif accion == 'add_asignacion':
             Asignacion.objects.create(
-                colegio=colegio,
-                grado=request.POST.get('grado'),
+                colegio=colegio, grado=request.POST.get('grado'),
                 libro_titulo=request.POST.get('libro_titulo'),
                 fecha_inicio=request.POST.get('fecha_inicio') or None,
                 fecha_fin=request.POST.get('fecha_fin') or None
@@ -322,16 +240,11 @@ def configurar_colegio(request, colegio_id):
             a.save()
         elif accion == 'del_asignacion':
             Asignacion.objects.filter(id=request.POST.get('asignacion_id')).delete()
-            
         return redirect('configurar_colegio', colegio_id=colegio.id)
-
     bloques = Bloque.objects.filter(colegio=colegio).order_by('grado', 'orden')
     asignaciones = Asignacion.objects.filter(colegio=colegio).order_by('grado')
     libros_unicos = Libro.objects.values_list('titulo', flat=True).distinct()
-
     return render(request, 'colegios/configurar_colegio.html', {
-        'colegio': colegio,
-        'bloques': bloques,
-        'asignaciones': asignaciones,
-        'libros': libros_unicos
+        'colegio': colegio, 'bloques': bloques,
+        'asignaciones': asignaciones, 'libros': libros_unicos
     })
