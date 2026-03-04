@@ -4,3 +4,4 @@ __pycache__/
 .env
 carga_masiva.py
 PlantillaCargaMasiva_AAMO.xlsx
+conversorAAMO.xlsm
