@@ -2,6 +2,8 @@
 {% block header_title %}Crear Libros{% endblock %}
 {% block content %}
 <div class="row">
+
+    {# Panel izquierdo: crear libro #}
     <div class="col-md-4">
         <div class="card shadow-sm mb-4">
             <div class="card-header bg-primary text-white fw-bold">
@@ -11,39 +13,35 @@
                 <form method="POST">
                     {% csrf_token %}
                     <input type="hidden" name="accion" value="add">
-                    
                     <div class="mb-3">
                         <label class="form-label fw-bold">Título del Libro</label>
-                        <input type="text" name="titulo" class="form-control" placeholder="Ej: Saberes 11 Oro" required>
+                        {{ form.titulo }}
                     </div>
-                    
                     <div class="mb-3">
                         <label class="form-label fw-bold">Materia</label>
-                        <input type="text" name="materia" class="form-control" placeholder="Ej: Matemáticas" required>
+                        {{ form.materia }}
                     </div>
-                    
                     <div class="row">
                         <div class="col-6 mb-3">
                             <label class="form-label fw-bold">Unidad #</label>
-                            <input type="text" name="unidad" class="form-control" placeholder="Ej: 1" required>
+                            {{ form.unidad }}
                         </div>
                         <div class="col-6 mb-3">
                             <label class="form-label fw-bold">Nombre Unidad</label>
-                            <input type="text" name="nombre_unidad" class="form-control" placeholder="Ej: Funciones">
+                            {{ form.nombre_unidad }}
                         </div>
                     </div>
-                    
                     <div class="mb-3">
                         <label class="form-label fw-bold">Enlace (Link)</label>
-                        <input type="url" name="link_unidad" class="form-control" placeholder="https://...">
+                        {{ form.link_unidad }}
                     </div>
-                    
                     <button type="submit" class="btn btn-success w-100 fw-bold">Guardar Libro</button>
                 </form>
             </div>
         </div>
     </div>
 
+    {# Panel derecho: listado #}
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">
@@ -58,43 +56,34 @@
                                 <th>Materia</th>
                                 <th>Unidad</th>
                                 <th>Link</th>
-                                <th class="text-end">Acciones</th> </tr>
+                                <th class="text-end">Acciones</th>
+                            </tr>
                         </thead>
                         <tbody>
                             {% for lib in libros %}
                             <tr>
-                                <td>
-                                    <span class="fw-bold text-primary">{{ lib.titulo }}</span>
-                                </td>
-                                <td>
-                                    <span class="badge bg-secondary">{{ lib.materia }}</span>
-                                </td>
+                                <td><span class="fw-bold text-primary">{{ lib.titulo }}</span></td>
+                                <td><span class="badge bg-secondary">{{ lib.materia }}</span></td>
                                 <td>
                                     <div class="fw-bold">U.{{ lib.unidad }}</div>
                                     <small class="text-muted">{{ lib.nombre_unidad }}</small>
                                 </td>
                                 <td>
                                     {% if lib.link_unidad %}
-                                    <a href="{{ lib.link_unidad }}" target="_blank" class="btn btn-sm btn-outline-info py-0"><i class="fas fa-external-link-alt"></i> Ver</a>
+                                    <a href="{{ lib.link_unidad }}" target="_blank" class="btn btn-sm btn-outline-info py-0">
+                                        <i class="fas fa-external-link-alt"></i> Ver
+                                    </a>
                                     {% else %}-{% endif %}
                                 </td>
-                                
                                 <td class="text-end text-nowrap">
-                                    
-                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 me-1" 
-                                            data-id="{{ lib.id }}" data-titulo="{{ lib.titulo }}" data-materia="{{ lib.materia }}" 
-                                            data-unidad="{{ lib.unidad }}" data-nombre="{{ lib.nombre_unidad }}" data-link="{{ lib.link_unidad }}"
-                                            onclick="editarLibro(this.dataset.id, this.dataset.titulo, this.dataset.materia, this.dataset.unidad, this.dataset.nombre, this.dataset.link)">
+                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 me-1"
+                                            onclick="editarLibro('{{ lib.id }}', '{{ lib.titulo|escapejs }}', '{{ lib.materia|escapejs }}', '{{ lib.unidad|escapejs }}', '{{ lib.nombre_unidad|escapejs }}', '{{ lib.link_unidad|escapejs }}')">
                                         <i class="fas fa-edit"></i>
                                     </button>
-
-                                    <form method="POST" class="d-inline" onsubmit="return confirm('¿Seguro que deseas eliminar esta unidad?');">
-                                        {% csrf_token %}
-                                        <input type="hidden" name="accion" value="del">
-                                        <input type="hidden" name="libro_id" value="{{ lib.id }}">
-                                        <button type="submit" class="btn btn-sm btn-outline-danger py-0"><i class="fas fa-trash"></i></button>
-                                    </form>
-
+                                    <button type="button" class="btn btn-sm btn-outline-danger py-0"
+                                            onclick="confirmarEliminarLibro('{{ lib.id }}', '{{ lib.titulo|escapejs }}')">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
                                 </td>
                             </tr>
                             {% endfor %}
@@ -106,13 +95,13 @@
     </div>
 </div>
 
+{# Modal: Editar libro #}
 <div class="modal fade" id="modalEditLibro" tabindex="-1">
     <div class="modal-dialog">
         <form method="POST" class="modal-content">
             {% csrf_token %}
             <input type="hidden" name="accion" value="edit">
             <input type="hidden" name="libro_id" id="edit_libro_id">
-            
             <div class="modal-header bg-success text-white">
                 <h5 class="modal-title"><i class="fas fa-edit"></i> Editar Libro</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
@@ -149,15 +138,44 @@
     </div>
 </div>
 
+{# Modal: Confirmar eliminación de libro #}
+<div class="modal fade" id="modalEliminarLibro" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <form method="POST" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="del">
+            <input type="hidden" name="libro_id" id="del_libro_id">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Eliminar Libro</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Seguro que deseas eliminar <strong id="del_libro_nombre"></strong>?</p>
+                <p class="text-danger small">Esta acción no se puede deshacer.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-danger fw-bold">Sí, eliminar</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
     function editarLibro(id, titulo, materia, unidad, nombre, link) {
-        document.getElementById('edit_libro_id').value = id;
-        document.getElementById('edit_libro_titulo').value = titulo;
+        document.getElementById('edit_libro_id').value     = id;
+        document.getElementById('edit_libro_titulo').value  = titulo;
         document.getElementById('edit_libro_materia').value = materia;
-        document.getElementById('edit_libro_unidad').value = unidad;
-        document.getElementById('edit_libro_nombre').value = nombre;
-        document.getElementById('edit_libro_link').value = link;
+        document.getElementById('edit_libro_unidad').value  = unidad;
+        document.getElementById('edit_libro_nombre').value  = nombre;
+        document.getElementById('edit_libro_link').value    = link;
         new bootstrap.Modal(document.getElementById('modalEditLibro')).show();
+    }
+
+    function confirmarEliminarLibro(id, nombre) {
+        document.getElementById('del_libro_id').value        = id;
+        document.getElementById('del_libro_nombre').innerText = nombre;
+        new bootstrap.Modal(document.getElementById('modalEliminarLibro')).show();
     }
 </script>
 {% endblock %}

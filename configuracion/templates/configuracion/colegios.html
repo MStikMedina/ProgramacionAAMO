@@ -2,12 +2,15 @@
 {% block header_title %}Crear y Configurar Colegios{% endblock %}
 {% block content %}
 <div class="row">
+
+    {# Panel izquierdo: crear colegio #}
     <div class="col-md-4">
         <div class="card border-success mb-3">
             <div class="card-header bg-success text-white"><i class="fas fa-school"></i> Nuevo Colegio</div>
             <div class="card-body">
                 <form method="post">
                     {% csrf_token %}
+                    <input type="hidden" name="accion" value="add">
                     <div class="mb-3"><label class="fw-bold">Nombre</label> {{ form.nombre }}</div>
                     <div class="mb-3"><label class="fw-bold">Ciudad</label> {{ form.ciudad }}</div>
                     <div class="mb-3"><label class="fw-bold">Link Mapa</label> {{ form.mapa_link }}</div>
@@ -16,28 +19,52 @@
             </div>
         </div>
     </div>
+
+    {# Panel derecho: listado #}
     <div class="col-md-8">
         <div class="card">
             <div class="card-header">Listado de Colegios</div>
             <div class="table-responsive">
                 <table class="table table-striped table-hover mb-0">
-                    <thead class="table-dark"><tr><th>Nombre</th><th>Ciudad</th><th>Acciones</th></tr></thead>
+                    <thead class="table-dark">
+                        <tr><th>Nombre</th><th>Ciudad</th><th>Acciones</th></tr>
+                    </thead>
                     <tbody>
                         {% for c in colegios %}
                         <tr>
                             <td class="fw-bold">{{ c.nombre }}</td>
                             <td>{{ c.ciudad }}</td>
                             <td>
-                                {% if c.mapa_link %}<a href="{{ c.mapa_link }}" target="_blank" class="btn btn-sm btn-outline-secondary"><i class="fas fa-map-marker-alt"></i> Mapa</a>{% endif %}
-                                <button class="btn btn-sm btn-outline-primary ms-1" 
-                                        data-id="{{ c.id }}" 
-                                        data-nombre="{{ c.nombre }}" 
+                                {% if c.mapa_link %}
+                                <a href="{{ c.mapa_link }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                    <i class="fas fa-map-marker-alt"></i> Mapa
+                                </a>
+                                {% endif %}
+                                <button class="btn btn-sm btn-outline-primary ms-1"
+                                        data-id="{{ c.id }}"
+                                        data-nombre="{{ c.nombre }}"
                                         onclick="abrirConfiguracion(this.dataset.id, this.dataset.nombre)">
-                                    <i class="fas fa-pencil-alt"></i> Configurar
+                                    <i class="fas fa-cogs"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-warning ms-1"
+                                        data-id="{{ c.id }}"
+                                        data-nombre="{{ c.nombre }}"
+                                        data-ciudad="{{ c.ciudad }}"
+                                        data-mapa="{{ c.mapa_link|default:'' }}"
+                                        onclick="abrirEditar(this.dataset.id, this.dataset.nombre, this.dataset.ciudad, this.dataset.mapa)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger ms-1"
+                                        data-id="{{ c.id }}"
+                                        data-nombre="{{ c.nombre }}"
+                                        onclick="confirmarEliminar(this.dataset.id, this.dataset.nombre)">
+                                    <i class="fas fa-trash"></i>
                                 </button>
                             </td>
                         </tr>
-                        {% empty %}<tr><td colspan="3" class="text-center text-muted">Sin colegios.</td></tr>{% endfor %}
+                        {% empty %}
+                        <tr><td colspan="3" class="text-center text-muted">Sin colegios.</td></tr>
+                        {% endfor %}
                     </tbody>
                 </table>
             </div>
@@ -45,17 +72,77 @@
     </div>
 </div>
 
+{# Modal: Configurar colegio (bloques/asignaciones) #}
 <div class="modal fade" id="modalConfigColegio" tabindex="-1">
     <div class="modal-dialog modal-xl modal-dialog-centered">
         <div class="modal-content" style="height: 80vh;">
             <div class="modal-header bg-primary text-white py-2">
-                <h5 class="modal-title fs-6"><i class="fas fa-cogs"></i> Panel de Configuración: <span id="nombreColegioModal" class="fw-bold"></span></h5>
+                <h5 class="modal-title fs-6">
+                    <i class="fas fa-cogs"></i> Panel de Configuración:
+                    <span id="nombreColegioModal" class="fw-bold"></span>
+                </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body p-0">
-                <iframe id="iframeConfig" src="" style="width: 100%; height: 100%; border: none;"></iframe>
+                <iframe id="iframeConfig" src="" style="width:100%; height:100%; border:none;"></iframe>
             </div>
         </div>
+    </div>
+</div>
+
+{# Modal: Editar datos básicos del colegio #}
+<div class="modal fade" id="modalEditarColegio" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="post" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="edit">
+            <input type="hidden" name="colegio_id" id="edit_colegio_id">
+            <div class="modal-header bg-warning text-dark">
+                <h5 class="modal-title"><i class="fas fa-edit"></i> Editar Colegio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="fw-bold">Nombre</label>
+                    <input type="text" name="nombre" id="edit_nombre" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="fw-bold">Ciudad</label>
+                    <input type="text" name="ciudad" id="edit_ciudad" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="fw-bold">Link Mapa</label>
+                    <input type="url" name="mapa_link" id="edit_mapa" class="form-control" placeholder="https://maps.google...">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-warning fw-bold">Guardar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{# Modal: Confirmar eliminación #}
+<div class="modal fade" id="modalEliminarColegio" tabindex="-1">
+    <div class="modal-dialog modal-sm">
+        <form method="post" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="del">
+            <input type="hidden" name="colegio_id" id="del_colegio_id">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title"><i class="fas fa-exclamation-triangle"></i> Eliminar Colegio</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Seguro que deseas eliminar <strong id="del_colegio_nombre"></strong>?</p>
+                <p class="text-danger small">Esta acción no se puede deshacer y eliminará todos sus bloques y clases asociadas.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-danger fw-bold">Sí, eliminar</button>
+            </div>
+        </form>
     </div>
 </div>
 
@@ -63,8 +150,21 @@
     function abrirConfiguracion(id, nombre) {
         document.getElementById('nombreColegioModal').innerText = nombre;
         document.getElementById('iframeConfig').src = '/colegios/configurar-colegio/' + id + '/';
-        var myModal = new bootstrap.Modal(document.getElementById('modalConfigColegio'));
-        myModal.show();
+        new bootstrap.Modal(document.getElementById('modalConfigColegio')).show();
+    }
+
+    function abrirEditar(id, nombre, ciudad, mapa) {
+        document.getElementById('edit_colegio_id').value = id;
+        document.getElementById('edit_nombre').value     = nombre;
+        document.getElementById('edit_ciudad').value     = ciudad;
+        document.getElementById('edit_mapa').value       = mapa;
+        new bootstrap.Modal(document.getElementById('modalEditarColegio')).show();
+    }
+
+    function confirmarEliminar(id, nombre) {
+        document.getElementById('del_colegio_id').value        = id;
+        document.getElementById('del_colegio_nombre').innerText = nombre;
+        new bootstrap.Modal(document.getElementById('modalEliminarColegio')).show();
     }
 </script>
 {% endblock %}
