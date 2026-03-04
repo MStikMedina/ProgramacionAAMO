@@ -134,12 +134,9 @@
                                                             <div class="text-muted small">{{ clase.profesor.nombre_corto }}</div>
                                                             {% if clase.unidad %}
                                                                 <div class="badge bg-dark mt-1" style="font-size: 0.6rem;">
-                                                                    {% if clase.unidad == 'S' %}
-                                                                        Socialización
-                                                                    {% elif clase.unidad == 'A' %}
-                                                                        Material
-                                                                    {% else %}
-                                                                        Unidad {{ clase.unidad }}
+                                                                    {% if clase.unidad == 'A' %}Material
+                                                                    {% elif clase.unidad == 'S' %}Socialización
+                                                                    {% else %}Unidad {{ clase.unidad }}
                                                                     {% endif %}
                                                                 </div>
                                                             {% endif %}
@@ -285,7 +282,7 @@
                         <select name="profesor" id="modal_profesor" class="form-select" required>
                             <option value="">Seleccionar profesor...</option>
                             {% for p in profesores %}
-                            <option value="{{ p.id }}">{{ p.nombre }}</option>
+                            <option value="{{ p.id }}">{{ p.nombre_corto }}</option>
                             {% endfor %}
                         </select>
                     </div>
@@ -327,6 +324,9 @@
 {% endif %}
 
 <script>
+    // Etiquetas de unidades especiales (fuente única de verdad, definida en colegios/views.py)
+    const UNIDADES_ESPECIALES = JSON.parse('{% autoescape off %}{{ unidades_especiales|safe }}{% endautoescape %}');
+
     $(document).ready(function() {
         $('.select2-busqueda').select2({ theme: "bootstrap-5", width: '100%' });
     });
@@ -390,7 +390,6 @@
     }
 
     // Función auxiliar para cargar unidades y auto-recomendar
-    // Función auxiliar para cargar unidades y auto-recomendar
     async function cargarUnidades(grado, fechaISO, unidadGuardada = null) {
         let materia = document.getElementById('modal_materia').value;
         let bloqueId = document.getElementById('modal_bloque_id').value; // Novedad: Tomamos el bloque actual
@@ -416,7 +415,7 @@
             data.unidades.forEach(u => {
                 let opt = document.createElement('option');
                 opt.value = u; 
-                opt.textContent = (u === 'A') ? 'Material Asignado' : (u === 'S') ? 'Socialización de Simulacro' : 'Unidad ' + u;
+                opt.textContent = UNIDADES_ESPECIALES[u] || ('Unidad ' + u);
                 selectUni.appendChild(opt);
             });
 
