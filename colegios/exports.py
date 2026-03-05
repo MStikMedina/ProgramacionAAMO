@@ -170,13 +170,18 @@ def descargar_excel_colegio(request, colegio_id):
 
     fila += 1
 
-    # ── Tabla de docentes ──
-    clases_por_grado_profe = defaultdict(lambda: defaultdict(int))
+    # ── Tabla de docentes por materia ──
+    # Agrupamos: (profesor_id, materia) → {grado: count}
+    # Así cada fila representa UN profesor + UNA materia, no el total.
+    conteo = defaultdict(lambda: defaultdict(int))   # (prof_id, materia) → {grado: n}
+    ids_profes = set()
     for c in clases:
-        if c.profesor and not c.cancelada and not c.es_evento:
-            clases_por_grado_profe[c.bloque.grado][c.profesor_id] += 1
+        if c.profesor and not c.cancelada and not c.es_evento and c.materia:
+            conteo[(c.profesor_id, c.materia)][c.bloque.grado] += 1
+            ids_profes.add(c.profesor_id)
 
-    for ci_h, label in [(1, 'DOCENTES'), (2, 'DOCUMENTO'), (3, 'ÁREA')]:
+    # Cabecera
+    for ci_h, label in [(1, 'DOCENTES'), (2, 'DOCUMENTO'), (3, 'MATERIA')]:
         cell = ws.cell(fila, ci_h, label)
         cell.font = _font(bold=True)
         cell.fill = _fill('FCE4D6')
@@ -188,14 +193,31 @@ def descargar_excel_colegio(request, colegio_id):
 
     fila += 1
 
-    ids_profes = {pid for g in clases_por_grado_profe.values() for pid in g}
-    for profe in Profesor.objects.filter(id__in=ids_profes).order_by('nombre'):
-        ws.cell(fila, 1, profe.nombre_corto).font = _font()
-        ws.cell(fila, 2, profe.documento or '').font = _font()
-        ws.cell(fila, 3, profe.area_materia or '').font = _font()
+    # Ordenamos por nombre de profesor y luego por materia
+    profes_map = {p.id: p for p in Profesor.objects.filter(id__in=ids_profes)}
+    filas_datos = sorted(
+        conteo.keys(),
+        key=lambda k: (profes_map[k[0]].nombre_corto, k[1])
+    )
+
+    profe_anterior = None
+    for (prof_id, materia) in filas_datos:
+        profe = profes_map[prof_id]
+        # Solo imprime nombre y documento en la primera fila del profesor
+        if prof_id != profe_anterior:
+            ws.cell(fila, 1, profe.nombre_corto).font = _font(bold=True)
+            ws.cell(fila, 2, profe.documento or '').font = _font()
+            profe_anterior = prof_id
+        else:
+            ws.cell(fila, 1, '').font = _font()
+            ws.cell(fila, 2, '').font = _font()
+
+        ws.cell(fila, 3, materia).font = _font()
+
         for ci_g, grado in enumerate(grados_ordenados, start=4):
-            cnt = clases_por_grado_profe[grado].get(profe.id, 0)
+            cnt = conteo[(prof_id, materia)].get(grado, 0)
             ws.cell(fila, ci_g, cnt or '').font = _font()
+
         fila += 1
 
     ws.column_dimensions['A'].width = 28
