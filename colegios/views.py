@@ -353,8 +353,19 @@ def _ejecutar_auditoria(nombre_sel):
 # ─────────────────────────────────────────────────────────────
 
 def dashboard_colegios(request):
+    # Si es usuario de colegio, bloquear al colegio asignado
+    perfil_colegio = getattr(request, 'perfil_colegio', None)
+    if perfil_colegio is None and hasattr(request.user, 'perfil_colegio'):
+        try:
+            perfil_colegio = request.user.perfil_colegio
+        except Exception:
+            perfil_colegio = None
+
     colegios   = Colegio.objects.all().order_by('nombre')
-    id_col     = request.GET.get('id_col')
+    if perfil_colegio:
+        id_col = str(perfil_colegio.colegio.id)
+    else:
+        id_col = request.GET.get('id_col')
     tipo_vista = request.GET.get('vista', 'Semana')
     fecha_get  = request.GET.get('fecha')
 
@@ -396,10 +407,14 @@ def dashboard_colegios(request):
         ctx['bloques_agrupados'] = bloques_agrupados
         ctx['matriz'] = _construir_matriz(sel_col, bloques_raw, inicio, dias_header[-1])
 
-    if request.user.is_staff:
+    # Auditoría solo para superusuarios — evita queries costosas para usuarios de colegio/profesor
+    if request.user.is_superuser:
         nombre_sel = ctx['sel_col'].nombre if ctx.get('sel_col') else ''
         ctx.update(_ejecutar_auditoria(nombre_sel))
+    else:
+        ctx.update({'errores_duplicados': [], 'errores_profesores': [], 'errores_secuencias': []})
 
+    ctx['usuario_bloqueado'] = bool(perfil_colegio)
     return render(request, 'colegios/dashboard.html', ctx)
 
 

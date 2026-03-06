@@ -38,6 +38,10 @@
         <div class="card-body">
             <div class="row align-items-end g-3">
                 <div class="col-md-4">
+                    {% if usuario_bloqueado %}
+                    <label class="small fw-bold text-muted mb-1"><i class="fas fa-school"></i> Colegio:</label>
+                    <div class="form-control bg-light fw-bold">{{ sel_col.nombre }}</div>
+                    {% else %}
                     <label class="small fw-bold text-muted mb-1"><i class="fas fa-search"></i> Buscar Colegio:</label>
                     <select class="form-select select2-busqueda" onchange="window.location.href='?id_col=' + this.value + '&vista={{ tipo_vista }}&fecha={{ fecha_input }}'">
                         <option value="">Escribe el nombre del colegio...</option>
@@ -45,6 +49,7 @@
                         <option value="{{ c.id }}" {% if sel_col and sel_col.id == c.id %}selected{% endif %}>{{ c.nombre }}</option>
                         {% endfor %}
                     </select>
+                    {% endif %}
                 </div>
 
                 <div class="col-md-3 text-center">

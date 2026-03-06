@@ -1,0 +1,420 @@
+{% extends 'base.html' %}
+{% block header_title %}Gestión de Usuarios{% endblock %}
+
+{% block content %}
+<style>
+    .password-field { font-family: monospace; letter-spacing: 0.05em; }
+    .badge-tipo-col  { background-color: #0d6efd; }
+    .badge-tipo-prof { background-color: #198754; }
+    .tabla-usuarios th { background-color: #212529; color: #fff; font-weight: 600; }
+    .copy-btn { cursor: pointer; }
+</style>
+
+{% if messages %}
+<div class="mb-3">
+    {% for msg in messages %}
+    <div class="alert alert-{{ msg.tags }} alert-dismissible fade show py-2" role="alert">
+        <i class="fas fa-{% if msg.tags == 'success' %}check-circle{% else %}exclamation-circle{% endif %} me-1"></i>
+        {{ msg }}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    {% endfor %}
+</div>
+{% endif %}
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- SECCIÓN: USUARIOS DE COLEGIOS                                             -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <i class="fas fa-school text-primary me-2"></i>
+            <span class="fw-bold">Usuarios de Colegios</span>
+            <span class="badge bg-primary ms-2">{{ usuarios_colegio|length }}</span>
+        </div>
+        <button class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalCrearColegio">
+            <i class="fas fa-plus me-1"></i> Nuevo Usuario Colegio
+        </button>
+    </div>
+    <div class="card-body p-0">
+        {% if usuarios_colegio %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 tabla-usuarios">
+                <thead>
+                    <tr>
+                        <th class="ps-3">Colegio Asignado</th>
+                        <th>Usuario</th>
+                        <th>Contraseña</th>
+                        <th class="text-center" style="width:130px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in usuarios_colegio %}
+                    <tr>
+                        <td class="ps-3 fw-bold">{{ u.colegio.nombre }}</td>
+                        <td><code>{{ u.user.username }}</code></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="password-field" id="pass-col-{{ u.id }}">••••••••</span>
+                                <span data-real="{{ u.password_texto }}" id="real-col-{{ u.id }}" class="d-none"></span>
+                                <button class="btn btn-outline-secondary btn-sm py-0 px-1" title="Mostrar/ocultar"
+                                        onclick="togglePassTabla('col', {{ u.id }})">
+                                    <i class="fas fa-eye" id="eye-col-{{ u.id }}" style="font-size:0.75rem;"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm py-0 px-1 copy-btn" title="Copiar contraseña"
+                                        onclick="copiarPass('real-col-{{ u.id }}')">
+                                    <i class="fas fa-copy" style="font-size:0.75rem;"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-warning btn-sm py-0 px-2"
+                                    onclick="abrirEditarColegio({{ u.id }}, '{{ u.user.username }}', '{{ u.password_texto|escapejs }}', {{ u.colegio.id }})"
+                                    title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger btn-sm py-0 px-2"
+                                    onclick="confirmarEliminar('colegio', {{ u.id }}, '{{ u.user.username }}')"
+                                    title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+            <i class="fas fa-users-slash fa-2x mb-2 opacity-25"></i>
+            <p class="mb-0">No hay usuarios de colegios creados aún.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- SECCIÓN: USUARIOS DE PROFESORES                                           -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <div>
+            <i class="fas fa-chalkboard-teacher text-success me-2"></i>
+            <span class="fw-bold">Usuarios de Profesores</span>
+            <span class="badge bg-success ms-2">{{ usuarios_profesor|length }}</span>
+        </div>
+        <button class="btn btn-success btn-sm" data-bs-toggle="modal" data-bs-target="#modalCrearProfesor">
+            <i class="fas fa-plus me-1"></i> Nuevo Usuario Profesor
+        </button>
+    </div>
+    <div class="card-body p-0">
+        {% if usuarios_profesor %}
+        <div class="table-responsive">
+            <table class="table table-hover mb-0 tabla-usuarios">
+                <thead>
+                    <tr>
+                        <th class="ps-3">Profesor Asignado</th>
+                        <th>Usuario</th>
+                        <th>Contraseña</th>
+                        <th class="text-center" style="width:130px;">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for u in usuarios_profesor %}
+                    <tr>
+                        <td class="ps-3 fw-bold">{{ u.profesor.nombre }}</td>
+                        <td><code>{{ u.user.username }}</code></td>
+                        <td>
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="password-field" id="pass-prof-{{ u.id }}">••••••••</span>
+                                <span data-real="{{ u.password_texto }}" id="real-prof-{{ u.id }}" class="d-none"></span>
+                                <button class="btn btn-outline-secondary btn-sm py-0 px-1" title="Mostrar/ocultar"
+                                        onclick="togglePassTabla('prof', {{ u.id }})">
+                                    <i class="fas fa-eye" id="eye-prof-{{ u.id }}" style="font-size:0.75rem;"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary btn-sm py-0 px-1 copy-btn" title="Copiar contraseña"
+                                        onclick="copiarPass('real-prof-{{ u.id }}')">
+                                    <i class="fas fa-copy" style="font-size:0.75rem;"></i>
+                                </button>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <button class="btn btn-warning btn-sm py-0 px-2"
+                                    onclick="abrirEditarProfesor({{ u.id }}, '{{ u.user.username }}', '{{ u.password_texto|escapejs }}', {{ u.profesor.id }})"
+                                    title="Editar">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button class="btn btn-danger btn-sm py-0 px-2"
+                                    onclick="confirmarEliminar('profesor', {{ u.id }}, '{{ u.user.username }}')"
+                                    title="Eliminar">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="text-center py-4 text-muted">
+            <i class="fas fa-users-slash fa-2x mb-2 opacity-25"></i>
+            <p class="mb-0">No hay usuarios de profesores creados aún.</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+<!-- MODALES                                                                   -->
+<!-- ══════════════════════════════════════════════════════════════════════════ -->
+
+<!-- Crear usuario colegio -->
+<div class="modal fade" id="modalCrearColegio" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="crear_colegio">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Nuevo Usuario de Colegio</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Colegio</label>
+                    <select name="colegio_id" class="form-select" required>
+                        <option value="">Seleccionar colegio...</option>
+                        {% for c in colegios %}
+                        <option value="{{ c.id }}">{{ c.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nombre de Usuario</label>
+                    <input type="text" name="username" class="form-control" placeholder="Ej: colegio_nacional" required autocomplete="off">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Contraseña</label>
+                    <div class="input-group">
+                        <input type="text" name="password" id="newPassCol" class="form-control password-field"
+                               placeholder="Escribe una contraseña" required autocomplete="off">
+                        <button type="button" class="btn btn-outline-secondary" onclick="generarPass('newPassCol')">
+                            <i class="fas fa-magic" title="Generar contraseña"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted">Esta contraseña quedará visible en la tabla.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-save me-1"></i>Crear Usuario</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Crear usuario profesor -->
+<div class="modal fade" id="modalCrearProfesor" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="crear_profesor">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fas fa-plus me-2"></i>Nuevo Usuario de Profesor</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Profesor</label>
+                    <select name="profesor_id" class="form-select" required>
+                        <option value="">Seleccionar profesor...</option>
+                        {% for p in profesores %}
+                        <option value="{{ p.id }}">{{ p.nombre_corto }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nombre de Usuario</label>
+                    <input type="text" name="username" class="form-control" placeholder="Ej: prof_garcia" required autocomplete="off">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Contraseña</label>
+                    <div class="input-group">
+                        <input type="text" name="password" id="newPassProf" class="form-control password-field"
+                               placeholder="Escribe una contraseña" required autocomplete="off">
+                        <button type="button" class="btn btn-outline-secondary" onclick="generarPass('newPassProf')">
+                            <i class="fas fa-magic" title="Generar contraseña"></i>
+                        </button>
+                    </div>
+                    <small class="text-muted">Esta contraseña quedará visible en la tabla.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-success"><i class="fas fa-save me-1"></i>Crear Usuario</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Editar usuario colegio -->
+<div class="modal fade" id="modalEditarColegio" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="editar_colegio">
+            <input type="hidden" name="perfil_id" id="edit_col_perfil_id">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Editar Usuario de Colegio</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Colegio</label>
+                    <select name="colegio_id" id="edit_col_colegio" class="form-select" required>
+                        {% for c in colegios %}
+                        <option value="{{ c.id }}">{{ c.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nombre de Usuario</label>
+                    <input type="text" name="username" id="edit_col_username" class="form-control" required autocomplete="off">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nueva Contraseña</label>
+                    <div class="input-group">
+                        <input type="text" name="password" id="edit_col_password" class="form-control password-field"
+                               placeholder="Dejar en blanco para no cambiar" autocomplete="off">
+                        <button type="button" class="btn btn-outline-secondary" onclick="generarPass('edit_col_password')">
+                            <i class="fas fa-magic"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-warning"><i class="fas fa-save me-1"></i>Guardar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Editar usuario profesor -->
+<div class="modal fade" id="modalEditarProfesor" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" class="modal-content">
+            {% csrf_token %}
+            <input type="hidden" name="accion" value="editar_profesor">
+            <input type="hidden" name="perfil_id" id="edit_prof_perfil_id">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title"><i class="fas fa-edit me-2"></i>Editar Usuario de Profesor</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Profesor</label>
+                    <select name="profesor_id" id="edit_prof_profesor" class="form-select" required>
+                        {% for p in profesores %}
+                        <option value="{{ p.id }}">{{ p.nombre_corto }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nombre de Usuario</label>
+                    <input type="text" name="username" id="edit_prof_username" class="form-control" required autocomplete="off">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold">Nueva Contraseña</label>
+                    <div class="input-group">
+                        <input type="text" name="password" id="edit_prof_password" class="form-control password-field"
+                               placeholder="Dejar en blanco para no cambiar" autocomplete="off">
+                        <button type="button" class="btn btn-outline-secondary" onclick="generarPass('edit_prof_password')">
+                            <i class="fas fa-magic"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="submit" class="btn btn-warning"><i class="fas fa-save me-1"></i>Guardar Cambios</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Formulario oculto para eliminar -->
+<form method="POST" id="formEliminar" class="d-none">
+    {% csrf_token %}
+    <input type="hidden" name="accion"    id="elim_accion">
+    <input type="hidden" name="perfil_id" id="elim_perfil_id">
+</form>
+
+<script>
+    // ── Mostrar/ocultar contraseña en tabla ──────────────────────────────────
+    function togglePassTabla(tipo, id) {
+        const passEl = document.getElementById(`pass-${tipo}-${id}`);
+        const realEl = document.getElementById(`real-${tipo}-${id}`);
+        const eyeEl  = document.getElementById(`eye-${tipo}-${id}`);
+        const real   = realEl.getAttribute('data-real');
+        if (passEl.textContent === '••••••••') {
+            passEl.textContent = real;
+            eyeEl.classList.replace('fa-eye', 'fa-eye-slash');
+        } else {
+            passEl.textContent = '••••••••';
+            eyeEl.classList.replace('fa-eye-slash', 'fa-eye');
+        }
+    }
+
+    // ── Copiar contraseña al portapapeles ────────────────────────────────────
+    function copiarPass(realId) {
+        const val = document.getElementById(realId).getAttribute('data-real');
+        navigator.clipboard.writeText(val).then(() => {
+            // Toast temporal
+            const toast = document.createElement('div');
+            toast.className = 'position-fixed bottom-0 end-0 m-3 alert alert-success py-2 px-3 shadow';
+            toast.style.zIndex = 9999;
+            toast.innerHTML = '<i class="fas fa-check me-1"></i> Contraseña copiada';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2000);
+        });
+    }
+
+    // ── Generar contraseña aleatoria ─────────────────────────────────────────
+    function generarPass(inputId) {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789@#$!';
+        let pass = '';
+        for (let i = 0; i < 10; i++) {
+            pass += chars[Math.floor(Math.random() * chars.length)];
+        }
+        document.getElementById(inputId).value = pass;
+    }
+
+    // ── Abrir modal editar colegio ───────────────────────────────────────────
+    function abrirEditarColegio(perfilId, username, password, colegioId) {
+        document.getElementById('edit_col_perfil_id').value = perfilId;
+        document.getElementById('edit_col_username').value  = username;
+        document.getElementById('edit_col_password').value  = '';
+        document.getElementById('edit_col_colegio').value   = colegioId;
+        new bootstrap.Modal(document.getElementById('modalEditarColegio')).show();
+    }
+
+    // ── Abrir modal editar profesor ──────────────────────────────────────────
+    function abrirEditarProfesor(perfilId, username, password, profesorId) {
+        document.getElementById('edit_prof_perfil_id').value = perfilId;
+        document.getElementById('edit_prof_username').value  = username;
+        document.getElementById('edit_prof_password').value  = '';
+        document.getElementById('edit_prof_profesor').value  = profesorId;
+        new bootstrap.Modal(document.getElementById('modalEditarProfesor')).show();
+    }
+
+    // ── Confirmar eliminación ────────────────────────────────────────────────
+    function confirmarEliminar(tipo, perfilId, username) {
+        if (confirm(`¿Eliminar el usuario "${username}"? Esta acción no se puede deshacer.`)) {
+            document.getElementById('elim_accion').value    = `eliminar_${tipo}`;
+            document.getElementById('elim_perfil_id').value = perfilId;
+            document.getElementById('formEliminar').submit();
+        }
+    }
+</script>
+{% endblock %}

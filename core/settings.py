@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'colegios',
     'profesores',
     'general',
+    'usuarios',
 ]
 
 MIDDLEWARE = [
@@ -42,7 +43,10 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'usuarios.middleware.ControlAccesoMiddleware',
 ]
+
+LOGIN_URL = '/usuarios/login/'
 
 ROOT_URLCONF = 'core.urls'
 

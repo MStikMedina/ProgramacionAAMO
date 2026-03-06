@@ -58,10 +58,13 @@ def _resolver_unidad(unidad, unidad_obj):
     return None, str(unidad), '#'
 
 
-def _construir_entrada_clase(c, libro_titulo):
-    unidad_obj = Libro.objects.filter(
-        titulo=libro_titulo, materia=c.materia, unidad=c.unidad
-    ).first()
+def _construir_entrada_clase(c, libro_titulo, libros_map=None):
+    if libros_map is not None:
+        unidad_obj = libros_map.get((libro_titulo, c.materia or '', str(c.unidad or '')))
+    else:
+        unidad_obj = Libro.objects.filter(
+            titulo=libro_titulo, materia=c.materia, unidad=c.unidad
+        ).first()
 
     material_override, unidad_full, unidad_link = _resolver_unidad(c.unidad, unidad_obj)
 
@@ -76,10 +79,13 @@ def _construir_entrada_clase(c, libro_titulo):
     }
 
 
-def _construir_entrada_particular(p):
-    unidad_obj = Libro.objects.filter(
-        titulo=p.material, materia=p.materia, unidad=p.unidad
-    ).first()
+def _construir_entrada_particular(p, libros_map=None):
+    if libros_map is not None:
+        unidad_obj = libros_map.get((p.material or '', p.materia or '', str(p.unidad or '')))
+    else:
+        unidad_obj = Libro.objects.filter(
+            titulo=p.material, materia=p.materia, unidad=p.unidad
+        ).first()
 
     material_override, unidad_full, unidad_link = _resolver_unidad(p.unidad, unidad_obj)
 
@@ -177,10 +183,23 @@ def ver_horario(request):
         return redirect(f"{request.path}?profesor_id={profesor_id}")
 
     # ── GET: mostrar horario ──
-    profesor_id  = request.GET.get('profesor_id')
+    # Si es usuario de profesor, bloquear al profesor asignado
+    perfil_profesor = getattr(request, 'perfil_profesor', None)
+    if perfil_profesor is None and hasattr(request.user, 'perfil_profesor'):
+        try:
+            perfil_profesor = request.user.perfil_profesor
+        except Exception:
+            perfil_profesor = None
+
+    if perfil_profesor:
+        profesor_id = str(perfil_profesor.profesor.id)
+    else:
+        profesor_id = request.GET.get('profesor_id')
+
     profesores   = Profesor.objects.all().order_by('nombre')
     todos_libros = Libro.objects.values_list('titulo', flat=True).distinct()
     agrupado_por_fecha = []
+    usuario_bloqueado  = bool(perfil_profesor)
 
     if profesor_id:
         temp_dict = defaultdict(list)
@@ -201,12 +220,17 @@ def ver_horario(request):
         for a in Asignacion.objects.filter(colegio_id__in=colegios_ids):
             asignaciones_por_clave[(a.colegio_id, a.grado)].append(a)
 
+        # Pre-cargar todos los libros en memoria para evitar N+1
+        libros_map = {
+            (l.titulo, l.materia, str(l.unidad)): l
+            for l in Libro.objects.all()
+        }
+
         for c in clases:
-            # Se pasa la fecha de la clase para encontrar el libro vigente ese día
             libro_titulo = _libro_para_fecha(
                 asignaciones_por_clave, c.colegio_id, c.bloque.grado, c.fecha
             )
-            temp_dict[c.fecha].append(_construir_entrada_clase(c, libro_titulo))
+            temp_dict[c.fecha].append(_construir_entrada_clase(c, libro_titulo, libros_map))
 
         # 2. Clases particulares
         particulares = (
@@ -215,7 +239,7 @@ def ver_horario(request):
             .order_by('fecha')
         )
         for p in particulares:
-            temp_dict[p.fecha].append(_construir_entrada_particular(p))
+            temp_dict[p.fecha].append(_construir_entrada_particular(p, libros_map))
 
         # 3. Ordenar por fecha y luego por hora
         for fecha in sorted(temp_dict.keys()):
@@ -227,8 +251,9 @@ def ver_horario(request):
             })
 
     return render(request, 'profesores/horario.html', {
-        'profesores':   profesores,
-        'agrupado':     agrupado_por_fecha,
-        'profesor_sel': profesor_id,
-        'todos_libros': todos_libros,
+        'profesores':        profesores,
+        'agrupado':          agrupado_por_fecha,
+        'profesor_sel':      profesor_id,
+        'todos_libros':      todos_libros,
+        'usuario_bloqueado': usuario_bloqueado,
     })
