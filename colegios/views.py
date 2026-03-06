@@ -6,6 +6,7 @@ import re
 from configuracion.models import Colegio, Profesor, Libro
 from .models import Bloque, Clase, Asignacion
 from django.views.decorators.clickjacking import xframe_options_sameorigin
+from django.core.cache import cache
 
 # ─────────────────────────────────────────────────────────────
 # CONSTANTES DE NEGOCIO (fuente única de verdad)
@@ -393,6 +394,15 @@ def dashboard_colegios(request):
         if request.method == 'POST' and 'guardar_clase' in request.POST:
             if request.user.is_staff:
                 _guardar_clase(request, sel_col)
+                # Invalidar caché de bloques y matrices de este colegio
+                from django.core.cache import cache as _cache
+                _cache.delete(f'bloques_{sel_col.id}')
+                # Eliminar matrices cacheadas de este colegio (patrón)
+                for vista in ['Semana', 'Mes', 'Año']:
+                    for delta in range(-60, 60):
+                        from datetime import date as _date, timedelta as _td
+                        d = _date.today() + _td(days=delta)
+                        _cache.delete(f'matriz_{sel_col.id}_{vista}_{d}')
             return redirect(request.get_full_path())
 
         inicio, dias_totales = _calcular_rango_fechas(tipo_vista, fecha_ref)
@@ -404,9 +414,24 @@ def dashboard_colegios(request):
             'fecha_sig':   (inicio + timedelta(days=dias_totales)).strftime('%Y-%m-%d'),
         })
 
-        bloques_raw, bloques_agrupados = _construir_bloques_agrupados(sel_col)
+        # Bloques en caché por colegio (estructura que cambia raramente)
+        cache_key_bloques = f'bloques_{sel_col.id}'
+        cached = cache.get(cache_key_bloques)
+        if cached is None:
+            bloques_raw, bloques_agrupados = _construir_bloques_agrupados(sel_col)
+            cache.set(cache_key_bloques, (bloques_raw, bloques_agrupados), 300)
+        else:
+            bloques_raw, bloques_agrupados = cached
+
         ctx['bloques_agrupados'] = bloques_agrupados
-        ctx['matriz'] = _construir_matriz(sel_col, bloques_raw, inicio, dias_header[-1])
+
+        # Matriz en caché por colegio+vista+fecha (cambia con clases programadas)
+        cache_key_matriz = f'matriz_{sel_col.id}_{tipo_vista}_{inicio}'
+        matriz = cache.get(cache_key_matriz)
+        if matriz is None:
+            matriz = _construir_matriz(sel_col, bloques_raw, inicio, dias_header[-1])
+            cache.set(cache_key_matriz, matriz, 300)
+        ctx['matriz'] = matriz
 
     # Auditoría solo para superusuarios — evita queries costosas para usuarios de colegio/profesor
     if request.user.is_superuser:

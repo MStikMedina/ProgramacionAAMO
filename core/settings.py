@@ -99,6 +99,28 @@ USE_L10N = True
 USE_TZ = True
 
 # ─────────────────────────────────────────────────────────────
+# CACHÉ
+# ─────────────────────────────────────────────────────────────
+# LocMemCache para desarrollo — sin dependencias extra.
+# Para producción con Redis, instalar django-redis y cambiar por:
+#
+#   CACHES = {
+#       'default': {
+#           'BACKEND': 'django_redis.cache.RedisCache',
+#           'LOCATION': os.environ.get('REDIS_URL', 'redis://127.0.0.1:6379/1'),
+#           'OPTIONS': {'CLIENT_CLASS': 'django_redis.client.DefaultClient'},
+#           'TIMEOUT': 300,
+#       }
+#   }
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'aamo-cache',
+        'TIMEOUT': 300,  # 5 minutos
+    }
+}
+
+# ─────────────────────────────────────────────────────────────
 # ARCHIVOS ESTÁTICOS
 # ─────────────────────────────────────────────────────────────
 STATIC_URL = 'static/'

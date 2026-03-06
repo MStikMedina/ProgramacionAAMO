@@ -1,4 +1,5 @@
 from django.shortcuts import render, redirect
+from django.core.cache import cache
 from django.http import JsonResponse
 from colegios.models import Clase, Asignacion, ClaseParticular
 from configuracion.models import Profesor, Libro
@@ -216,16 +217,23 @@ def ver_horario(request):
         # ── CORRECCIÓN: cargamos TODAS las asignaciones de los colegios
         # relevantes como una lista por clave (colegio_id, grado), para
         # poder luego buscar la que corresponde a la FECHA de cada clase.
-        colegios_ids = clases.values_list('colegio_id', flat=True).distinct()
-        asignaciones_por_clave = defaultdict(list)
-        for a in Asignacion.objects.filter(colegio_id__in=colegios_ids):
-            asignaciones_por_clave[(a.colegio_id, a.grado)].append(a)
+        colegios_ids = list(clases.values_list('colegio_id', flat=True).distinct())
+        cache_key_asig = 'asig_map_' + '_'.join(str(i) for i in sorted(colegios_ids))
+        asignaciones_por_clave = cache.get(cache_key_asig)
+        if asignaciones_por_clave is None:
+            asignaciones_por_clave = defaultdict(list)
+            for a in Asignacion.objects.filter(colegio_id__in=colegios_ids):
+                asignaciones_por_clave[(a.colegio_id, a.grado)].append(a)
+            cache.set(cache_key_asig, asignaciones_por_clave, 300)
 
-        # Pre-cargar todos los libros en memoria para evitar N+1
-        libros_map = {
-            (l.titulo, l.materia, str(l.unidad)): l
-            for l in Libro.objects.all()
-        }
+        # Libros en caché global (cambian raramente — 5 min)
+        libros_map = cache.get('libros_map_global')
+        if libros_map is None:
+            libros_map = {
+                (l.titulo, l.materia, str(l.unidad)): l
+                for l in Libro.objects.all()
+            }
+            cache.set('libros_map_global', libros_map, 300)
 
         for c in clases:
             libro_titulo = _libro_para_fecha(
