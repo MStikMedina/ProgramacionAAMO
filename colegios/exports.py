@@ -8,7 +8,7 @@ from datetime import date
 import re
 
 from configuracion.models import Colegio, Profesor, Libro
-from .models import Bloque, Clase, Asignacion
+from .models import Bloque, Clase, Asignacion, ClaseParticular
 
 # ─────────────────────────────────────────────────────────────
 # CONSTANTES
@@ -237,24 +237,89 @@ def descargar_excel_colegio(request, colegio_id):
 
 # ─────────────────────────────────────────────────────────────
 # DESCARGA EXCEL — PROFESOR
+# Incluye Clases de colegios + ClaseParticular, ordenadas por fecha y hora
 # ─────────────────────────────────────────────────────────────
 
 def descargar_excel_profesor(request, profesor_id):
     profesor = get_object_or_404(Profesor, id=profesor_id)
     año = date.today().year
 
-    clases = list(
+    def _minutos(hora_str):
+        try:
+            partes = hora_str.split('-')[0].strip().split(':')
+            return int(partes[0]) * 60 + int(partes[1])
+        except Exception:
+            return 9999
+
+    # ── 1. Normalizar ambos tipos de clase en una lista unificada ──
+    # Cada entrada es un dict con los mismos campos para renderizar igual.
+
+    entradas = []
+
+    clases_colegio = list(
         Clase.objects
-        .filter(profesor=profesor, fecha__year=año)
+        .filter(profesor=profesor, fecha__year=año, cancelada=False, es_evento=False)
         .select_related('bloque__colegio', 'bloque')
-        .order_by('fecha', 'bloque__colegio__nombre', 'bloque__orden')
     )
+
+    # Pre-cargar asignaciones y libros en memoria
+    colegios_ids = list({c.bloque.colegio_id for c in clases_colegio})
+    asig_map   = _build_asignaciones_map(colegios_ids)
+    libros_map = {(l.titulo, l.materia, str(l.unidad)): l for l in Libro.objects.all()}
+
+    for c in clases_colegio:
+        colegio = c.bloque.colegio
+        grado   = c.bloque.grado
+        titulo  = _titulo_libro(asig_map, colegio.id, grado, c.fecha)
+        unidad_c = str(c.unidad) if c.unidad else ''
+        material_c = UNIDADES_ESPECIALES.get(unidad_c, titulo or 'Sin libro asignado')
+        entradas.append({
+            'fecha':          c.fecha,
+            'hora':           c.bloque.hora,
+            'minutos':        _minutos(c.bloque.hora),
+            'colegio_nombre': colegio.nombre,
+            'ciudad':         colegio.ciudad or '',
+            'mapa_link':      colegio.mapa_link or '',
+            'grado':          grado,
+            'material':       material_c,
+            'materia':        c.materia or '',
+            'unidad':         str(c.unidad) if c.unidad else '',
+            'tipo':           'colegio',
+            'libro_obj':      libros_map.get((titulo, c.materia, str(c.unidad))) if c.unidad else None,
+        })
+
+    particulares = list(
+        ClaseParticular.objects
+        .filter(profesor=profesor, fecha__year=año)
+    )
+
+    for p in particulares:
+        unidad = str(p.unidad) if p.unidad else ''
+        libro_obj = libros_map.get((p.material, p.materia, unidad))
+        material_p = UNIDADES_ESPECIALES.get(unidad, p.material or 'Sin libro asignado')
+        entradas.append({
+            'fecha':          p.fecha,
+            'hora':           p.hora,
+            'minutos':        _minutos(p.hora),
+            'colegio_nombre': p.estudiante,   # estudiante/colegio particular
+            'ciudad':         p.ciudad or '',
+            'mapa_link':      p.mapa_link or '',
+            'grado':          p.grado,
+            'material':       material_p,
+            'materia':        p.materia,
+            'unidad':         unidad,
+            'tipo':           'particular',
+            'libro_obj':      libro_obj,
+        })
+
+    # Ordenar por fecha y luego por hora
+    entradas.sort(key=lambda e: (e['fecha'], e['minutos']))
 
     wb = Workbook()
     ws = wb.active
     ws.title = profesor.nombre_corto[:31]
 
-    if not clases:
+    if not entradas:
         ws['A1'] = f'{profesor.nombre} — Sin clases registradas en {año}'
         ws['A1'].font = _font(bold=True)
         response = HttpResponse(
@@ -264,94 +329,84 @@ def descargar_excel_profesor(request, profesor_id):
         wb.save(response)
         return response
 
-    # ── CORRECCIÓN 1: clave incluye libro_titulo
-    libros_map = {
-        (l.titulo, l.materia, str(l.unidad)): l
-        for l in Libro.objects.all()
-    }
-
-    # ── CORRECCIÓN 2: pre-cargar asignaciones de todos los colegios
-    # involucrados en las clases de este profesor, en memoria.
-    colegios_ids = list({c.bloque.colegio_id for c in clases})
-    asig_map = _build_asignaciones_map(colegios_ids)
-
-    # ── Fila 1: nombre del profesor + fechas ──
+    # ── 2. Fila 1: nombre del profesor + fechas (combinar celdas del mismo día) ──
     ws['A1'] = profesor.nombre
     ws['A1'].font = _font(bold=True)
     ws['A1'].fill = _fill('B0B3B2')
 
-    for ci, clase in enumerate(clases, start=2):
-        cell = ws.cell(1, ci, _fecha_label(clase.fecha))
+    for ci, entrada in enumerate(entradas, start=2):
+        cell = ws.cell(1, ci, _fecha_label(entrada['fecha']))
         cell.font = _font(bold=True)
         cell.fill = _fill('D9D9D9')
-        cell.alignment = Alignment(horizontal='center')
+        cell.alignment = Alignment(horizontal='center', vertical='center')
 
-    # ── Filas 2-8: etiquetas en columna A ──
+    # Combinar celdas consecutivas con la misma fecha
+    grupos_fecha = []
+    ci_inicio = 2
+    for i, entrada in enumerate(entradas):
+        ci_actual = i + 2
+        fecha_sig = entradas[i + 1]['fecha'] if i < len(entradas) - 1 else None
+        if fecha_sig != entrada['fecha']:
+            grupos_fecha.append((ci_inicio, ci_actual, entrada['fecha']))
+            ci_inicio = ci_actual + 1
+
+    for (col_ini, col_fin, fecha) in grupos_fecha:
+        if col_ini < col_fin:
+            ws.merge_cells(start_row=1, start_column=col_ini,
+                           end_row=1,   end_column=col_fin)
+            cell = ws.cell(1, col_ini, _fecha_label(fecha))
+            cell.font = _font(bold=True)
+            cell.fill = _fill('D9D9D9')
+            cell.alignment = Alignment(horizontal='center', vertical='center')
+
+    # ── 3. Filas 2-8: etiquetas en columna A ──
     labels = ['Colegio', 'Ciudad', 'Hora', 'Grado', 'Material', 'Asignatura', 'Unidad']
     for row_i, label in enumerate(labels, start=2):
         cell = ws.cell(row_i, 1, label)
         cell.font = _font(bold=True)
         cell.fill = _fill('D4D4D4')
 
-    # ── Columnas de datos (una por clase) ──
-    for ci, clase in enumerate(clases, start=2):
-        colegio = clase.bloque.colegio
-        grado   = clase.bloque.grado
-
-        # Fila 2: colegio con hyperlink de Maps
-        cell_col = ws.cell(2, ci, colegio.nombre)
-        if colegio.mapa_link:
-            cell_col.hyperlink = colegio.mapa_link
+    # ── 4. Columnas de datos (una por entrada) ──
+    for ci, e in enumerate(entradas, start=2):
+        # Fila 2: colegio/estudiante con hyperlink de Maps si existe
+        cell_col = ws.cell(2, ci, e['colegio_nombre'])
+        if e['mapa_link']:
+            cell_col.hyperlink = e['mapa_link']
             cell_col.font = _font(link=True)
         else:
             cell_col.font = _font()
 
-        ws.cell(3, ci, colegio.ciudad or '').font = _font()
-        ws.cell(4, ci, clase.bloque.hora).font = _font()
-        ws.cell(5, ci, grado).font = _font()
+        # Clases particulares: fondo amarillo suave para distinguirlas
+        fill_particular = _fill('FFF9C4') if e['tipo'] == 'particular' else None
+        if fill_particular:
+            for row_i in range(2, 9):
+                ws.cell(row_i, ci).fill = fill_particular
 
-        if clase.cancelada:
-            ws.cell(6, ci, 'CANCELADA').font = _font()
-            ws.cell(7, ci, clase.materia or '').font = _font()
-            ws.cell(8, ci, '').font = _font()
-            continue
+        ws.cell(3, ci, e['ciudad']).font  = _font()
+        ws.cell(4, ci, e['hora']).font    = _font()
+        ws.cell(5, ci, e['grado']).font   = _font()
+        ws.cell(6, ci, e['material']).font = _font()
+        ws.cell(7, ci, e['materia']).font  = _font()
 
-        if clase.es_evento:
-            ws.cell(6, ci, 'Evento').font = _font()
-            ws.cell(7, ci, clase.titulo_evento or '').font = _font()
-            ws.cell(8, ci, '').font = _font()
-            continue
-
-        # ── CORRECCIÓN: usar asig_map pre-cargado con lookup por fecha
-        titulo = _titulo_libro(asig_map, colegio.id, grado, clase.fecha)
-        ws.cell(6, ci, titulo).font = _font()
-
-        ws.cell(7, ci, clase.materia or '').font = _font()
-
-        unidad = str(clase.unidad) if clase.unidad else ''
+        # Fila 8: unidad con hyperlink al link del libro si existe
+        unidad = e['unidad']
         if unidad in UNIDADES_ESPECIALES:
             ws.cell(8, ci, UNIDADES_ESPECIALES[unidad]).font = _font()
-
-        elif unidad.isdigit():
-            # ── CORRECCIÓN: lookup con (titulo, materia, unidad)
-            libro_obj = libros_map.get((titulo, clase.materia, unidad))
-            if libro_obj:
-                nom_u = libro_obj.nombre_unidad or ''
-                unidad_txt = f'{unidad}. {nom_u}' if nom_u else unidad
-                cell_u = ws.cell(8, ci, unidad_txt)
-                if libro_obj.link_unidad:
-                    cell_u.hyperlink = libro_obj.link_unidad
-                    cell_u.font = _font(link=True)
-                else:
-                    cell_u.font = _font()
+        elif unidad.isdigit() and e['libro_obj']:
+            libro_obj = e['libro_obj']
+            nom_u = libro_obj.nombre_unidad or ''
+            unidad_txt = f'{unidad}. {nom_u}' if nom_u else unidad
+            cell_u = ws.cell(8, ci, unidad_txt)
+            if libro_obj.link_unidad:
+                cell_u.hyperlink = libro_obj.link_unidad
+                cell_u.font = _font(link=True)
             else:
-                ws.cell(8, ci, unidad).font = _font()
-
+                cell_u.font = _font()
         else:
             ws.cell(8, ci, unidad).font = _font()
 
     ws.column_dimensions['A'].width = 12
-    for ci in range(2, 2 + len(clases)):
+    for ci in range(2, 2 + len(entradas)):
         ws.column_dimensions[get_column_letter(ci)].width = 22
     ws.row_dimensions[1].height = 30
 
