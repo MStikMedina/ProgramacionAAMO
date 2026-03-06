@@ -75,9 +75,19 @@ def gestionar_usuarios(request):
             colegio_id = request.POST.get('colegio_id')
             if not username or not password or not colegio_id:
                 messages.error(request, 'Completa todos los campos.')
-            elif User.objects.filter(username=username).exists():
-                messages.error(request, f'El usuario "{username}" ya existe.')
             else:
+                # Si existe como usuario huérfano (sin perfil), limpiarlo antes de recrear
+                user_existente = User.objects.filter(username=username).first()
+                if user_existente:
+                    tiene_perfil = (
+                        UsuarioColegio.objects.filter(user=user_existente).exists() or
+                        UsuarioProfesor.objects.filter(user=user_existente).exists()
+                    )
+                    if tiene_perfil:
+                        messages.error(request, f'El usuario "{username}" ya está en uso.')
+                        return redirect('gestionar_usuarios')
+                    else:
+                        user_existente.delete()  # limpiar huérfano
                 user = User.objects.create_user(username=username, password=password,
                                                  is_staff=False, is_superuser=False)
                 colegio = get_object_or_404(Colegio, id=colegio_id)
@@ -91,9 +101,19 @@ def gestionar_usuarios(request):
             profesor_id = request.POST.get('profesor_id')
             if not username or not password or not profesor_id:
                 messages.error(request, 'Completa todos los campos.')
-            elif User.objects.filter(username=username).exists():
-                messages.error(request, f'El usuario "{username}" ya existe.')
             else:
+                # Si existe como usuario huérfano (sin perfil), limpiarlo antes de recrear
+                user_existente = User.objects.filter(username=username).first()
+                if user_existente:
+                    tiene_perfil = (
+                        UsuarioColegio.objects.filter(user=user_existente).exists() or
+                        UsuarioProfesor.objects.filter(user=user_existente).exists()
+                    )
+                    if tiene_perfil:
+                        messages.error(request, f'El usuario "{username}" ya está en uso.')
+                        return redirect('gestionar_usuarios')
+                    else:
+                        user_existente.delete()  # limpiar huérfano
                 user = User.objects.create_user(username=username, password=password,
                                                  is_staff=False, is_superuser=False)
                 profesor = get_object_or_404(Profesor, id=profesor_id)
@@ -150,14 +170,18 @@ def gestionar_usuarios(request):
         elif accion == 'eliminar_colegio':
             perfil = get_object_or_404(UsuarioColegio, id=request.POST.get('perfil_id'))
             nombre = perfil.user.username
-            perfil.user.delete()
+            user   = perfil.user
+            perfil.delete()          # borrar perfil primero
+            user.delete()            # luego el User de Django
             messages.success(request, f'Usuario "{nombre}" eliminado.')
 
         # ── Eliminar usuario profesor ──
         elif accion == 'eliminar_profesor':
             perfil = get_object_or_404(UsuarioProfesor, id=request.POST.get('perfil_id'))
             nombre = perfil.user.username
-            perfil.user.delete()
+            user   = perfil.user
+            perfil.delete()          # borrar perfil primero
+            user.delete()            # luego el User de Django
             messages.success(request, f'Usuario "{nombre}" eliminado.')
 
         return redirect('gestionar_usuarios')
