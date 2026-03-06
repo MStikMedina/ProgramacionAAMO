@@ -330,6 +330,10 @@
     // Etiquetas de unidades especiales (fuente única de verdad, definida en colegios/views.py)
     const UNIDADES_ESPECIALES = JSON.parse(document.getElementById('unidades-especiales-data').textContent);
 
+    // URLs definidas desde Django para no hardcodearlas en el JS
+    const URL_OBTENER_MATERIAS = "{% url 'ajax_obtener_materias' %}";
+    const URL_OBTENER_UNIDADES = "{% url 'ajax_obtener_unidades' %}";
+
     $(document).ready(function() {
         $('.select2-busqueda').select2({ theme: "bootstrap-5", width: '100%' });
     });
@@ -361,7 +365,7 @@
 
         // 1. Cargar materias asignadas para esa fecha
         try {
-            let res = await fetch(`/colegios/ajax/obtener-materias/?colegio_id={{ sel_col.id }}&grado=${grado}&fecha=${fechaISO}`);
+            let res = await fetch(`${URL_OBTENER_MATERIAS}?colegio_id={{ sel_col.id }}&grado=${grado}&fecha=${fechaISO}`);
             let data = await res.json();
             let materias = data.materias || data; // compatibilidad si fuera array plano
             let sinLibro = data.sin_libro || false;
@@ -416,7 +420,7 @@
         selectUni.innerHTML = '<option value="">Cargando unidades...</option>';
         
         // Novedad: URL actualizada enviando el bloque_id y sin el profesor
-        let url = `/colegios/ajax/obtener-unidades/?colegio_id={{ sel_col.id }}&grado=${grado}&fecha=${fechaISO}&materia=${materia}&bloque_id=${bloqueId}`;
+        let url = `${URL_OBTENER_UNIDADES}?colegio_id={{ sel_col.id }}&grado=${grado}&fecha=${fechaISO}&materia=${materia}&bloque_id=${bloqueId}`;
         
         try {
             let res = await fetch(url);
