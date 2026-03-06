@@ -56,7 +56,7 @@
                         <td>
                             <div class="d-flex align-items-center gap-2">
                                 <span class="password-field" id="pass-col-{{ u.id }}">••••••••</span>
-                                <span data-real="{{ u.password_texto }}" id="real-col-{{ u.id }}" class="d-none"></span>
+                                <span data-real="{{ u.password_visible }}" id="real-col-{{ u.id }}" class="d-none"></span>
                                 <button class="btn btn-outline-secondary btn-sm py-0 px-1" title="Mostrar/ocultar"
                                         onclick="togglePassTabla('col', {{ u.id }})">
                                     <i class="fas fa-eye" id="eye-col-{{ u.id }}" style="font-size:0.75rem;"></i>
@@ -69,7 +69,7 @@
                         </td>
                         <td class="text-center">
                             <button class="btn btn-warning btn-sm py-0 px-2"
-                                    onclick="abrirEditarColegio({{ u.id }}, '{{ u.user.username }}', '{{ u.password_texto|escapejs }}', {{ u.colegio.id }})"
+                                    onclick="abrirEditarColegio({{ u.id }}, '{{ u.user.username }}', '{{ u.password_visible|escapejs }}', {{ u.colegio.id }})"
                                     title="Editar">
                                 <i class="fas fa-edit"></i>
                             </button>
@@ -127,7 +127,7 @@
                         <td>
                             <div class="d-flex align-items-center gap-2">
                                 <span class="password-field" id="pass-prof-{{ u.id }}">••••••••</span>
-                                <span data-real="{{ u.password_texto }}" id="real-prof-{{ u.id }}" class="d-none"></span>
+                                <span data-real="{{ u.password_visible }}" id="real-prof-{{ u.id }}" class="d-none"></span>
                                 <button class="btn btn-outline-secondary btn-sm py-0 px-1" title="Mostrar/ocultar"
                                         onclick="togglePassTabla('prof', {{ u.id }})">
                                     <i class="fas fa-eye" id="eye-prof-{{ u.id }}" style="font-size:0.75rem;"></i>
@@ -140,7 +140,7 @@
                         </td>
                         <td class="text-center">
                             <button class="btn btn-warning btn-sm py-0 px-2"
-                                    onclick="abrirEditarProfesor({{ u.id }}, '{{ u.user.username }}', '{{ u.password_texto|escapejs }}', {{ u.profesor.id }})"
+                                    onclick="abrirEditarProfesor({{ u.id }}, '{{ u.user.username }}', '{{ u.password_visible|escapejs }}', {{ u.profesor.id }})"
                                     title="Editar">
                                 <i class="fas fa-edit"></i>
                             </button>

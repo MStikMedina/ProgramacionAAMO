@@ -1,4 +1,5 @@
 from django.shortcuts import redirect
+from django.http import HttpResponseForbidden
 
 # Rutas que no requieren autenticación
 RUTAS_PUBLICAS = ['/usuarios/login/', '/usuarios/logout/', '/admin/']
@@ -6,10 +7,11 @@ RUTAS_PUBLICAS = ['/usuarios/login/', '/usuarios/logout/', '/admin/']
 
 class ControlAccesoMiddleware:
     """
-    - Usuarios no autenticados → redirige al login.
-    - Superusuarios → acceso total.
-    - UsuarioColegio → solo /colegios/ con su colegio bloqueado.
-    - UsuarioProfesor → solo /profesores/ con su profesor bloqueado.
+    Niveles de acceso:
+    - No autenticado        → solo login
+    - Superusuario          → acceso total
+    - UsuarioColegio        → solo /colegios/ y únicamente con su colegio (id forzado en la vista)
+    - UsuarioProfesor       → solo /profesores/ y únicamente con su profesor (id forzado en la vista)
     """
 
     def __init__(self, get_response):
@@ -30,17 +32,22 @@ class ControlAccesoMiddleware:
 
         # Superusuario: acceso total
         if request.user.is_superuser:
+            request.perfil_colegio  = None
+            request.perfil_profesor = None
             return self.get_response(request)
 
         # ── Usuario de Colegio ──────────────────────────────────────────────
         try:
             perfil = request.user.perfil_colegio
-            # Adjuntar el perfil al request para que la vista lo use
             request.perfil_colegio  = perfil
             request.perfil_profesor = None
-            # Solo puede acceder a /colegios/
-            if not path.startswith('/colegios/'):
+
+            # Rutas permitidas para usuario de colegio
+            PERMITIDAS_COLEGIO = ['/colegios/']
+            if not any(path.startswith(r) for r in PERMITIDAS_COLEGIO):
+                # Cualquier otra ruta → devolver al su colegio
                 return redirect(f'/colegios/?id_col={perfil.colegio.id}')
+
             return self.get_response(request)
         except Exception:
             pass
@@ -50,12 +57,18 @@ class ControlAccesoMiddleware:
             perfil = request.user.perfil_profesor
             request.perfil_colegio  = None
             request.perfil_profesor = perfil
-            # Solo puede acceder a /profesores/
-            if not path.startswith('/profesores/'):
+
+            # Rutas permitidas para usuario de profesor
+            PERMITIDAS_PROFESOR = ['/profesores/']
+            if not any(path.startswith(r) for r in PERMITIDAS_PROFESOR):
+                # Cualquier otra ruta → devolver a su horario
                 return redirect(f'/profesores/?profesor_id={perfil.profesor.id}')
+
             return self.get_response(request)
         except Exception:
             pass
 
-        # Usuario autenticado sin perfil (no debería ocurrir, pero por seguridad)
-        return self.get_response(request)
+        # Usuario autenticado sin perfil asignado → logout forzado
+        from django.contrib.auth import logout
+        logout(request)
+        return redirect('/usuarios/login/')

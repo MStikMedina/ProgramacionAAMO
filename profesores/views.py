@@ -192,6 +192,7 @@ def ver_horario(request):
             perfil_profesor = None
 
     if perfil_profesor:
+        # Forzar siempre el profesor asignado, ignorando cualquier parámetro de URL
         profesor_id = str(perfil_profesor.profesor.id)
     else:
         profesor_id = request.GET.get('profesor_id')

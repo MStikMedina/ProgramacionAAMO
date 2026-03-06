@@ -363,6 +363,7 @@ def dashboard_colegios(request):
 
     colegios   = Colegio.objects.all().order_by('nombre')
     if perfil_colegio:
+        # Forzar siempre el colegio asignado, ignorando cualquier parámetro de URL
         id_col = str(perfil_colegio.colegio.id)
     else:
         id_col = request.GET.get('id_col')

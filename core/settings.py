@@ -17,6 +17,7 @@ load_dotenv(dotenv_path=BASE_DIR / '.env')
 SECRET_KEY = os.environ.get('SECRET_KEY')
 DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 ALLOWED_HOSTS = []
+PASSWORD_ENCRYPT_KEY = os.environ.get('PASSWORD_ENCRYPT_KEY')
 
 # ─────────────────────────────────────────────────────────────
 # APLICACIONES

@@ -4,6 +4,7 @@ from django.contrib.auth.models import User
 from django.contrib.auth.decorators import user_passes_test
 from django.contrib import messages
 from .models import UsuarioColegio, UsuarioProfesor
+from .crypto import cifrar, descifrar
 from configuracion.models import Colegio, Profesor
 
 
@@ -80,7 +81,7 @@ def gestionar_usuarios(request):
                 user = User.objects.create_user(username=username, password=password,
                                                  is_staff=False, is_superuser=False)
                 colegio = get_object_or_404(Colegio, id=colegio_id)
-                UsuarioColegio.objects.create(user=user, colegio=colegio, password_texto=password)
+                UsuarioColegio.objects.create(user=user, colegio=colegio, password_texto=cifrar(password))
                 messages.success(request, f'Usuario "{username}" creado para {colegio.nombre}.')
 
         # ── Crear usuario profesor ──
@@ -96,7 +97,7 @@ def gestionar_usuarios(request):
                 user = User.objects.create_user(username=username, password=password,
                                                  is_staff=False, is_superuser=False)
                 profesor = get_object_or_404(Profesor, id=profesor_id)
-                UsuarioProfesor.objects.create(user=user, profesor=profesor, password_texto=password)
+                UsuarioProfesor.objects.create(user=user, profesor=profesor, password_texto=cifrar(password))
                 messages.success(request, f'Usuario "{username}" creado para {profesor.nombre}.')
 
         # ── Editar usuario colegio ──
@@ -115,7 +116,7 @@ def gestionar_usuarios(request):
 
             if new_password:
                 perfil.user.set_password(new_password)
-                perfil.password_texto = new_password
+                perfil.password_texto = cifrar(new_password)
 
             perfil.user.save()
             perfil.colegio = get_object_or_404(Colegio, id=new_col_id)
@@ -138,7 +139,7 @@ def gestionar_usuarios(request):
 
             if new_password:
                 perfil.user.set_password(new_password)
-                perfil.password_texto = new_password
+                perfil.password_texto = cifrar(new_password)
 
             perfil.user.save()
             perfil.profesor = get_object_or_404(Profesor, id=new_prof_id)
@@ -161,15 +162,22 @@ def gestionar_usuarios(request):
 
         return redirect('gestionar_usuarios')
 
-    # GET
-    usuarios_colegio  = UsuarioColegio.objects.select_related('user', 'colegio').order_by('colegio__nombre', 'user__username')
-    usuarios_profesor = UsuarioProfesor.objects.select_related('user', 'profesor').order_by('profesor__nombre', 'user__username')
-    colegios  = Colegio.objects.all().order_by('nombre')
+    # GET — descifrar contraseñas para mostrar en tabla
+    usuarios_colegio_qs  = UsuarioColegio.objects.select_related('user', 'colegio').order_by('colegio__nombre', 'user__username')
+    usuarios_profesor_qs = UsuarioProfesor.objects.select_related('user', 'profesor').order_by('profesor__nombre', 'user__username')
+
+    # Adjuntar contraseña descifrada como atributo temporal (no se guarda en BD)
+    for u in usuarios_colegio_qs:
+        u.password_visible = descifrar(u.password_texto)
+    for u in usuarios_profesor_qs:
+        u.password_visible = descifrar(u.password_texto)
+
+    colegios   = Colegio.objects.all().order_by('nombre')
     profesores = Profesor.objects.all().order_by('nombre')
 
     return render(request, 'usuarios/gestionar.html', {
-        'usuarios_colegio':  usuarios_colegio,
-        'usuarios_profesor': usuarios_profesor,
+        'usuarios_colegio':  usuarios_colegio_qs,
+        'usuarios_profesor': usuarios_profesor_qs,
         'colegios':  colegios,
         'profesores': profesores,
     })
