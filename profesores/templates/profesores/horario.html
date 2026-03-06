@@ -207,6 +207,10 @@
 </div>
 
 <script>
+    // URLs generadas por Django — nunca hardcodear rutas
+    const URL_ASIGNATURAS = "{% url 'ajax_asignaturas_particular' %}";
+    const URL_UNIDADES    = "{% url 'ajax_unidades_particular' %}";
+
     // --- LÓGICA DE APERTURA DEL MODAL ---
     function abrirNuevoParticular() {
         document.getElementById('modal_part_accion').name = "guardar_particular";
@@ -242,7 +246,7 @@
         // Cargar Asignaturas correspondientes
         let asigSelect = document.getElementById('modal_asignatura_part');
         asigSelect.innerHTML = '<option value="">Cargando...</option>';
-        let res1 = await fetch(`/profesores/ajax/asignaturas/?material=${encodeURIComponent(material)}`);
+        let res1 = await fetch(`${URL_ASIGNATURAS}?material=${encodeURIComponent(material)}`);
         let data1 = await res1.json();
         asigSelect.innerHTML = '<option value="">Seleccionar asignatura...</option>';
         data1.forEach(m => {
@@ -253,7 +257,7 @@
         // Cargar Unidades correspondientes
         let uniSelect = document.getElementById('modal_unidad_part');
         uniSelect.innerHTML = '<option value="">Cargando...</option>';
-        let res2 = await fetch(`/profesores/ajax/unidades/?material=${encodeURIComponent(material)}&materia=${encodeURIComponent(materia)}`);
+        let res2 = await fetch(`${URL_UNIDADES}?material=${encodeURIComponent(material)}&materia=${encodeURIComponent(materia)}`);
         let data2 = await res2.json();
         uniSelect.innerHTML = '<option value="">Seleccionar unidad...</option>';
         data2.forEach(u => {
@@ -285,7 +289,7 @@
             return;
         }
         
-        let res = await fetch(`/profesores/ajax/asignaturas/?material=${encodeURIComponent(material)}`);
+        let res = await fetch(`${URL_ASIGNATURAS}?material=${encodeURIComponent(material)}`);
         let data = await res.json();
         asigSelect.innerHTML = '<option value="">Seleccionar asignatura...</option>';
         data.forEach(m => {
@@ -305,7 +309,7 @@
             return;
         }
         
-        let res = await fetch(`/profesores/ajax/unidades/?material=${encodeURIComponent(material)}&materia=${encodeURIComponent(materia)}`);
+        let res = await fetch(`${URL_UNIDADES}?material=${encodeURIComponent(material)}&materia=${encodeURIComponent(materia)}`);
         let data = await res.json();
         uniSelect.innerHTML = '<option value="">Seleccionar unidad...</option>';
         data.forEach(u => {
