@@ -287,6 +287,12 @@
                         <select name="materia" id="modal_materia" class="form-select" required>
                             <option value="">Seleccionar materia...</option>
                         </select>
+                        <div id="aviso_sin_libro" class="d-none mt-1">
+                            <small class="text-warning fw-bold">
+                                <i class="fas fa-exclamation-triangle"></i>
+                                Sin libro asignado para esta fecha — solo disponibles Socialización de Simulacro y Material Asignado.
+                            </small>
+                        </div>
                     </div>
                     <div class="mb-3">
                         <label class="form-label fw-bold">Unidad</label>
@@ -344,6 +350,7 @@
         document.getElementById('modal_cancelada').checked = false;
         document.getElementById('modal_titulo_evento').value = "";
         document.getElementById('modal_comentarios').value = "";
+        document.getElementById('aviso_sin_libro').classList.add('d-none');
         toggleCamposEvento();
 
         // Limpiar selects dependientes
@@ -355,8 +362,15 @@
         // 1. Cargar materias asignadas para esa fecha
         try {
             let res = await fetch(`/colegios/ajax/obtener-materias/?colegio_id={{ sel_col.id }}&grado=${grado}&fecha=${fechaISO}`);
-            let materias = await res.json();
-            
+            let data = await res.json();
+            let materias = data.materias || data; // compatibilidad si fuera array plano
+            let sinLibro = data.sin_libro || false;
+
+            // Mostrar/ocultar aviso de sin libro
+            let avisoEl = document.getElementById('aviso_sin_libro');
+            if (sinLibro) { avisoEl.classList.remove('d-none'); }
+            else          { avisoEl.classList.add('d-none'); }
+
             selectMat.innerHTML = '<option value="">Seleccionar materia...</option>';
             materias.forEach(m => {
                 let opt = document.createElement('option');

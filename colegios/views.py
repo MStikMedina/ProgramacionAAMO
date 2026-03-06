@@ -59,12 +59,12 @@ def obtener_materias(request):
     fecha_str  = request.GET.get('fecha')
 
     if not all([colegio_id, grado, fecha_str]):
-        return JsonResponse([])
+        return JsonResponse({'materias': [], 'sin_libro': True})
 
     try:
         fecha_clase = datetime.strptime(fecha_str, '%Y-%m-%d').date()
     except ValueError:
-        return JsonResponse([])
+        return JsonResponse({'materias': [], 'sin_libro': True})
 
     # Filtra las asignaciones vigentes para esa fecha exacta
     asignaciones = Asignacion.objects.filter(
@@ -79,7 +79,14 @@ def obtener_materias(request):
         .values_list('materia', flat=True)
         .distinct()
     )
-    return JsonResponse(materias, safe=False)
+
+    # Si no hay libro asignado para esta fecha, hacemos fallback a todas
+    # las materias del sistema. Las unidades disponibles serán solo S y A.
+    sin_libro = not materias
+    if sin_libro:
+        materias = list(Libro.objects.values_list('materia', flat=True).distinct().order_by('materia'))
+
+    return JsonResponse({'materias': materias, 'sin_libro': sin_libro})
 
 
 def obtener_unidades(request):
@@ -113,28 +120,35 @@ def obtener_unidades(request):
     numeros = sorted(
         [str(u) for u in set(unidades_libro) if str(u).isdigit()], key=int
     )
-    unidades_finales = numeros + list(UNIDADES_ESPECIALES.keys())
 
-    # Calcular unidad recomendada
+    # Si no hay libro asignado para esta fecha, solo se permiten unidades especiales
+    sin_libro = not list(titulos_asignados)
+    if sin_libro:
+        unidades_finales = list(UNIDADES_ESPECIALES.keys())
+    else:
+        unidades_finales = numeros + list(UNIDADES_ESPECIALES.keys())
+
+    # Calcular unidad recomendada (solo aplica cuando hay libro)
     unidad_recomendada = ''
-    query_clases = Clase.objects.filter(
-        colegio_id=colegio_id,
-        bloque__grado=grado,
-        materia=materia,
-        fecha__lte=fecha_clase,
-    )
-    if bloque_id:
-        query_clases = query_clases.exclude(bloque_id=bloque_id, fecha=fecha_clase)
+    if not sin_libro:
+        query_clases = Clase.objects.filter(
+            colegio_id=colegio_id,
+            bloque__grado=grado,
+            materia=materia,
+            fecha__lte=fecha_clase,
+        )
+        if bloque_id:
+            query_clases = query_clases.exclude(bloque_id=bloque_id, fecha=fecha_clase)
 
-    ultima_clase = query_clases.order_by('-fecha', '-bloque__orden', '-id').first()
-    if ultima_clase and ultima_clase.unidad and str(ultima_clase.unidad).isdigit():
-        siguiente = str(int(ultima_clase.unidad) + 1)
-        if siguiente in numeros:
-            unidad_recomendada = siguiente
-    elif numeros:
-        unidad_recomendada = numeros[0]
+        ultima_clase = query_clases.order_by('-fecha', '-bloque__orden', '-id').first()
+        if ultima_clase and ultima_clase.unidad and str(ultima_clase.unidad).isdigit():
+            siguiente = str(int(ultima_clase.unidad) + 1)
+            if siguiente in numeros:
+                unidad_recomendada = siguiente
+        elif numeros:
+            unidad_recomendada = numeros[0]
 
-    return JsonResponse({'unidades': unidades_finales, 'recomendada': unidad_recomendada})
+    return JsonResponse({'unidades': unidades_finales, 'recomendada': unidad_recomendada, 'sin_libro': sin_libro})
 
 
 # ─────────────────────────────────────────────────────────────
