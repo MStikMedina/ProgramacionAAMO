@@ -397,6 +397,8 @@ def dashboard_colegios(request):
                 # Invalidar caché de bloques y matrices de este colegio
                 from django.core.cache import cache as _cache
                 _cache.delete(f'bloques_{sel_col.id}')
+                # Invalidar caché de usuario de colegio (días con clases)
+                _cache.delete(f'matriz_{sel_col.id}_colegio_user')
                 # Eliminar matrices cacheadas de este colegio (patrón)
                 for vista in ['Semana', 'Mes', 'Año']:
                     for delta in range(-60, 60):
@@ -405,14 +407,27 @@ def dashboard_colegios(request):
                         _cache.delete(f'matriz_{sel_col.id}_{vista}_{d}')
             return redirect(request.get_full_path())
 
-        inicio, dias_totales = _calcular_rango_fechas(tipo_vista, fecha_ref)
-        dias_header = [inicio + timedelta(days=i) for i in range(dias_totales)]
-
-        ctx.update({
-            'dias_header': dias_header,
-            'fecha_ant':   (inicio - timedelta(days=1)).strftime('%Y-%m-%d'),
-            'fecha_sig':   (inicio + timedelta(days=dias_totales)).strftime('%Y-%m-%d'),
-        })
+        if perfil_colegio:
+            # Usuario de colegio: mostrar SOLO los días que tienen clases programadas
+            dias_con_clases = sorted(
+                Clase.objects.filter(colegio=sel_col)
+                .dates('fecha', 'day')
+            )
+            dias_header = dias_con_clases
+            inicio = dias_header[0] if dias_header else date.today()
+            ctx.update({
+                'dias_header': dias_header,
+                'fecha_ant':   '',
+                'fecha_sig':   '',
+            })
+        else:
+            inicio, dias_totales = _calcular_rango_fechas(tipo_vista, fecha_ref)
+            dias_header = [inicio + timedelta(days=i) for i in range(dias_totales)]
+            ctx.update({
+                'dias_header': dias_header,
+                'fecha_ant':   (inicio - timedelta(days=1)).strftime('%Y-%m-%d'),
+                'fecha_sig':   (inicio + timedelta(days=dias_totales)).strftime('%Y-%m-%d'),
+            })
 
         # Bloques en caché por colegio (estructura que cambia raramente)
         cache_key_bloques = f'bloques_{sel_col.id}'
@@ -426,11 +441,23 @@ def dashboard_colegios(request):
         ctx['bloques_agrupados'] = bloques_agrupados
 
         # Matriz en caché por colegio+vista+fecha (cambia con clases programadas)
-        cache_key_matriz = f'matriz_{sel_col.id}_{tipo_vista}_{inicio}'
-        matriz = cache.get(cache_key_matriz)
-        if matriz is None:
-            matriz = _construir_matriz(sel_col, bloques_raw, inicio, dias_header[-1])
-            cache.set(cache_key_matriz, matriz, 300)
+        if perfil_colegio and dias_header:
+            # Para usuario de colegio: matriz cubre todos sus días de clase
+            cache_key_matriz = f'matriz_{sel_col.id}_colegio_user'
+            matriz = cache.get(cache_key_matriz)
+            if matriz is None:
+                fin_matriz = dias_header[-1]
+                inicio_matriz = dias_header[0]
+                matriz = _construir_matriz(sel_col, bloques_raw, inicio_matriz, fin_matriz)
+                cache.set(cache_key_matriz, matriz, 300)
+        elif perfil_colegio and not dias_header:
+            matriz = {b.id: {} for b in bloques_raw}
+        else:
+            cache_key_matriz = f'matriz_{sel_col.id}_{tipo_vista}_{inicio}'
+            matriz = cache.get(cache_key_matriz)
+            if matriz is None:
+                matriz = _construir_matriz(sel_col, bloques_raw, inicio, dias_header[-1])
+                cache.set(cache_key_matriz, matriz, 300)
         ctx['matriz'] = matriz
 
     # Auditoría solo para superusuarios — evita queries costosas para usuarios de colegio/profesor
