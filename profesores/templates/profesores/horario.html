@@ -61,6 +61,7 @@
         <div class="celda celda-label">Material</div>
         <div class="celda celda-label">Asignatura</div>
         <div class="celda celda-label">Unidad</div>
+        <div class="celda celda-label">Informe</div>
     </div>
 
     <div class="contenedor-datos">
@@ -72,9 +73,8 @@
                 <div class="columna-clase">
                     <div class="celda position-relative">
                         <a href="{{ item.maps_link }}" target="_blank" class="link-azul text-truncate" style="max-width: 85%;">{% if item.es_particular %}{{ item.particular_obj.estudiante }} (Part.){% else %}{{ item.clase.colegio.nombre }}{% endif %}</a>
-                        
                         {% if request.user.is_staff and item.es_particular %}
-                        <button class="btn btn-sm text-warning p-0 border-0 position-absolute" style="right: 8px;" title="Editar Clase Particular"
+                        <button class="btn btn-sm text-warning p-0 border-0 position-absolute" style="right: 6px;" title="Editar Clase Particular"
                             onclick="abrirEditarParticular('{{ item.particular_id }}', '{{ item.raw_data.estudiante|escapejs }}', '{{ item.raw_data.ciudad|escapejs }}', '{{ item.maps_link|escapejs }}', '{{ item.raw_data.fecha }}', '{{ item.raw_data.hora|escapejs }}', '{{ item.raw_data.grado|escapejs }}', '{{ item.material|escapejs }}', '{{ item.raw_data.materia|escapejs }}', '{{ item.raw_data.unidad|escapejs }}')">
                             <i class="fas fa-edit"></i>
                         </button>
@@ -97,6 +97,29 @@
                                 {{ item.unidad_full }}
                             </a>
                         </div>
+                    </div>
+
+                    <!-- Fila Informe -->
+                    <div class="celda justify-content-center">
+                        {% if item.es_particular %}
+                        {% with inf=item.particular_obj.informe %}
+                        <button class="btn btn-sm {% if inf and inf.completado %}btn-success{% else %}btn-outline-secondary{% endif %} py-0 px-2"
+                                title="{% if inf and inf.completado %}Ver / Editar informe{% else %}Crear informe{% endif %}"
+                                onclick="abrirInforme(null, '{{ item.particular_id }}', '{{ item.particular_obj.estudiante|escapejs }}', '{{ item.particular_obj.grado|escapejs }}', '{{ item.raw_data.fecha }}', '{{ item.raw_data.materia|escapejs }}', '{{ item.unidad_full|escapejs }}', '{{ item.material|escapejs }}', this)">
+                            <i class="fas fa-{% if inf and inf.completado %}check{% else %}plus{% endif %}"></i>
+                            {% if inf and inf.completado %}Subido{% else %}Pendiente{% endif %}
+                        </button>
+                        {% endwith %}
+                        {% else %}
+                        {% with inf=item.clase.informe %}
+                        <button class="btn btn-sm {% if inf and inf.completado %}btn-success{% else %}btn-outline-secondary{% endif %} py-0 px-2"
+                                title="{% if inf and inf.completado %}Ver / Editar informe{% else %}Crear informe{% endif %}"
+                                onclick="abrirInforme('{{ item.clase.id }}', null, '{{ item.clase.colegio.nombre|escapejs }}', '{{ item.clase.bloque.grado|escapejs }}', '{{ item.clase.fecha|date:'Y-m-d' }}', '{{ item.clase.materia|escapejs }}', '{{ item.unidad_full|escapejs }}', '{{ item.material|escapejs }}', this)">
+                            <i class="fas fa-{% if inf and inf.completado %}check{% else %}plus{% endif %}"></i>
+                            {% if inf and inf.completado %}Subido{% else %}Pendiente{% endif %}
+                        </button>
+                        {% endwith %}
+                        {% endif %}
                     </div>
                 </div>
                 {% endfor %}
@@ -208,8 +231,10 @@
 
 <script>
     // URLs generadas por Django — nunca hardcodear rutas
-    const URL_ASIGNATURAS = "{% url 'ajax_asignaturas_particular' %}";
-    const URL_UNIDADES    = "{% url 'ajax_unidades_particular' %}";
+    const URL_ASIGNATURAS    = "{% url 'ajax_asignaturas_particular' %}";
+    const URL_UNIDADES       = "{% url 'ajax_unidades_particular' %}";
+    const URL_OBTENER_INFORME = "{% url 'ajax_obtener_informe' %}";
+    const URL_GUARDAR_INFORME = "{% url 'ajax_guardar_informe' %}";
 
     // --- LÓGICA DE APERTURA DEL MODAL ---
     function abrirNuevoParticular() {
@@ -318,4 +343,199 @@
     });
 </script>
 {% endif %}
+<!-- ══════════════════════════════════════════════════════ -->
+<!-- MODAL INFORME DE SESIÓN                               -->
+<!-- ══════════════════════════════════════════════════════ -->
+<div class="modal fade" id="modalInforme" tabindex="-1">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header" style="background-color:#212529; color:#fff;">
+                <div>
+                    <h5 class="modal-title mb-0"><i class="fas fa-file-alt me-2"></i>Informe de Sesión</h5>
+                    <small id="inf_header_sub" class="opacity-75"></small>
+                </div>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+
+            <!-- Info de sesión (solo lectura) -->
+            <div class="modal-body pb-0">
+                <div class="row g-2 mb-3 p-3 rounded" style="background:#f8f9fa; border:1px solid #dee2e6;">
+                    <div class="col-md-5">
+                        <div class="small text-muted fw-bold">Colegio / Curso</div>
+                        <div id="inf_colegio" class="fw-bold"></div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="small text-muted fw-bold">Fecha</div>
+                        <div id="inf_fecha"></div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="small text-muted fw-bold">Materia / Temática</div>
+                        <div id="inf_materia" class="small"></div>
+                    </div>
+                    <div class="col-12">
+                        <div class="small text-muted fw-bold">Material Empleado</div>
+                        <div id="inf_material" class="small"></div>
+                    </div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-primary">Actividades <span class="text-danger">*</span></label>
+                    <textarea id="inf_actividades" class="form-control" rows="5"
+                              placeholder="Describe las actividades desarrolladas en la sesión..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-primary">Fortalezas</label>
+                    <textarea id="inf_fortalezas" class="form-control" rows="4"
+                              placeholder="Describe las fortalezas observadas..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-primary">Debilidades</label>
+                    <textarea id="inf_debilidades" class="form-control" rows="3"
+                              placeholder="Describe las debilidades observadas..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-primary">Recomendaciones</label>
+                    <textarea id="inf_recomendaciones" class="form-control" rows="3"
+                              placeholder="Escribe tus recomendaciones..."></textarea>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label fw-bold text-primary">Bibliografía</label>
+                    <textarea id="inf_bibliografia" class="form-control" rows="2"
+                              placeholder="Referencias bibliográficas utilizadas..."></textarea>
+                </div>
+            </div>
+
+            <div class="modal-footer justify-content-between">
+                <div id="inf_estado_texto" class="text-muted small fst-italic"></div>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+                    <button type="button" class="btn btn-primary fw-bold" onclick="guardarInforme()">
+                        <i class="fas fa-save me-1"></i> Guardar Informe
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // URLs informe — siempre disponibles (independiente del tipo de usuario)
+    const URL_OBTENER_INFORME = "{% url 'ajax_obtener_informe' %}";
+    const URL_GUARDAR_INFORME = "{% url 'ajax_guardar_informe' %}";
+
+    // Estado interno del modal
+    let _inf = { clase_id: null, particular_id: null, fecha_iso: null,
+                 colegio_nombre: '', grado: '', materia: '', tematica: '', material: '' };
+    let _inf_btn = null;  // referencia al botón que abrió el modal
+
+    async function abrirInforme(claseId, particularId, colegio, grado, fechaIso, materia, tematica, material, btn) {
+        _inf_btn = btn || null;
+        _inf = { clase_id: claseId, particular_id: particularId, fecha_iso: fechaIso,
+                 colegio_nombre: colegio, grado: grado, materia: materia,
+                 tematica: tematica, material: material };
+
+        // Rellenar datos de solo lectura
+        document.getElementById('inf_colegio').textContent  = colegio + ' — ' + grado;
+        document.getElementById('inf_materia').textContent  = materia + ' / ' + tematica;
+        document.getElementById('inf_material').textContent = material;
+        document.getElementById('inf_header_sub').textContent = colegio + ' · ' + grado + ' · ' + fechaIso;
+
+        // Formatear fecha
+        const meses = ['enero','febrero','marzo','abril','mayo','junio',
+                       'julio','agosto','septiembre','octubre','noviembre','diciembre'];
+        const dias  = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'];
+        const dt = new Date(fechaIso + 'T12:00:00');
+        const [y, m, d] = fechaIso.split('-');
+        document.getElementById('inf_fecha').textContent =
+            `${dias[dt.getDay()]}, ${parseInt(d)} de ${meses[parseInt(m)-1]} de ${y}`;
+
+        // Limpiar campos y estado
+        ['actividades','fortalezas','debilidades','recomendaciones','bibliografia'].forEach(f =>
+            document.getElementById('inf_' + f).value = '');
+        document.getElementById('inf_estado_texto').textContent = 'Cargando...';
+
+        new bootstrap.Modal(document.getElementById('modalInforme')).show();
+
+        // Cargar informe existente si lo hay
+        const params = claseId ? `clase_id=${claseId}` : `particular_id=${particularId}`;
+        try {
+            const res  = await fetch(`${URL_OBTENER_INFORME}?${params}`);
+            const data = await res.json();
+            if (data.existe) {
+                document.getElementById('inf_actividades').value     = data.actividades     || '';
+                document.getElementById('inf_fortalezas').value      = data.fortalezas      || '';
+                document.getElementById('inf_debilidades').value     = data.debilidades     || '';
+                document.getElementById('inf_recomendaciones').value = data.recomendaciones || '';
+                document.getElementById('inf_bibliografia').value    = data.bibliografia    || '';
+                document.getElementById('inf_estado_texto').textContent = '✓ Informe guardado anteriormente';
+            } else {
+                document.getElementById('inf_estado_texto').textContent = 'Informe nuevo — aún no guardado';
+            }
+        } catch(e) {
+            document.getElementById('inf_estado_texto').textContent = 'Error al cargar';
+        }
+    }
+
+    async function guardarInforme() {
+        const actividades = document.getElementById('inf_actividades').value.trim();
+        if (!actividades) {
+            alert('El campo Actividades es obligatorio.');
+            document.getElementById('inf_actividades').focus();
+            return;
+        }
+
+        const btnGuardar = document.querySelector('#modalInforme .btn-primary');
+        btnGuardar.disabled = true;
+        btnGuardar.innerHTML = '<i class="fas fa-spinner fa-spin me-1"></i> Guardando...';
+
+        const body = {
+            clase_id:      _inf.clase_id,
+            particular_id: _inf.particular_id,
+            profesor_id:   '{{ profesor_sel }}',
+            fecha_iso:     _inf.fecha_iso,
+            colegio_nombre: _inf.colegio_nombre,
+            grado:         _inf.grado,
+            materia:       _inf.materia,
+            tematica:      _inf.tematica,
+            material:      _inf.material,
+            actividades:     document.getElementById('inf_actividades').value,
+            fortalezas:      document.getElementById('inf_fortalezas').value,
+            debilidades:     document.getElementById('inf_debilidades').value,
+            recomendaciones: document.getElementById('inf_recomendaciones').value,
+            bibliografia:    document.getElementById('inf_bibliografia').value,
+        };
+
+        try {
+            const res  = await fetch(URL_GUARDAR_INFORME, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.cookie.match(/csrftoken=([^;]+)/)?.[1] || ''
+                },
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            if (data.ok) {
+                document.getElementById('inf_estado_texto').textContent = '✓ Informe guardado correctamente';
+                btnGuardar.innerHTML = '<i class="fas fa-check me-1"></i> Guardado';
+                // Actualizar el botón del horario inmediatamente
+                if (_inf_btn) {
+                    _inf_btn.className = 'btn btn-sm btn-success py-0 px-2';
+                    _inf_btn.innerHTML = '<i class="fas fa-check"></i> Subido';
+                }
+                setTimeout(() => {
+                    btnGuardar.disabled = false;
+                    btnGuardar.innerHTML = '<i class="fas fa-save me-1"></i> Guardar Informe';
+                }, 2000);
+            } else {
+                throw new Error(data.error || 'Error desconocido');
+            }
+        } catch(e) {
+            alert('Error al guardar: ' + e.message);
+            btnGuardar.disabled = false;
+            btnGuardar.innerHTML = '<i class="fas fa-save me-1"></i> Guardar Informe';
+        }
+    }
+</script>
+
 {% endblock %}

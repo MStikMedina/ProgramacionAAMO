@@ -43,9 +43,9 @@ class ControlAccesoMiddleware:
             request.perfil_profesor = None
 
             # Rutas permitidas para usuario de colegio
-            PERMITIDAS_COLEGIO = ['/colegios/']
+            PERMITIDAS_COLEGIO = ['/colegios/', '/informes/']
             if not any(path.startswith(r) for r in PERMITIDAS_COLEGIO):
-                # Cualquier otra ruta → devolver al su colegio
+                # Cualquier otra ruta → devolver a su colegio
                 return redirect(f'/colegios/?id_col={perfil.colegio.id}')
 
             return self.get_response(request)
@@ -59,7 +59,7 @@ class ControlAccesoMiddleware:
             request.perfil_profesor = perfil
 
             # Rutas permitidas para usuario de profesor
-            PERMITIDAS_PROFESOR = ['/profesores/']
+            PERMITIDAS_PROFESOR = ['/profesores/', '/informes/ajax/']
             if not any(path.startswith(r) for r in PERMITIDAS_PROFESOR):
                 # Cualquier otra ruta → devolver a su horario
                 return redirect(f'/profesores/?profesor_id={perfil.profesor.id}')

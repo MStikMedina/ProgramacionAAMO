@@ -181,6 +181,12 @@
             {% endif %}
             {% endif %}
             
+            {% if not request.user.perfil_profesor %}
+            <a href="{% url 'lista_informes' %}" class="nav-item {% if request.resolver_match.url_name == 'lista_informes' or request.resolver_match.url_name == 'detalle_informe' %}active{% endif %}">
+                <i class="fas fa-file-alt icon-main text-info"></i> Informes
+            </a>
+            {% endif %}
+
             {% if request.user.is_superuser %}
             <a href="#collapseConfig" data-bs-toggle="collapse" 
                class="nav-item justify-content-between {% if request.resolver_match.url_name == 'configuracion_colegios' or request.resolver_match.url_name == 'configuracion_profesores' or request.resolver_match.url_name == 'configuracion_libros' %}active{% endif %}" 
